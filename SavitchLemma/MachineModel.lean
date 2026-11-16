@@ -5,6 +5,7 @@ public import Mathlib.Data.Fintype.Basic
 public import Mathlib.Data.Fintype.Card
 public import Mathlib.Data.Fintype.Pi
 public import Mathlib.Data.Fintype.Prod
+public import Mathlib.Data.Finset.Card
 public import Mathlib.Logic.Relation
 
 import Mathlib.Tactic.Positivity
@@ -63,6 +64,26 @@ def BoundedTape.equivProd {Γ : Type*} (S : ℕ) :
 instance BoundedTape.fintype {Γ : Type*} [Fintype Γ] (S : ℕ) : Fintype (BoundedTape Γ S) :=
   Fintype.ofEquiv ((Fin S → Γ) × Fin S) (BoundedTape.equivProd S).symm
 
+/-- The cells currently containing a nonblank symbol. -/
+noncomputable def BoundedTape.nonblankCells {Γ : Type*} {S : ℕ}
+    (tape : BoundedTape Γ S) (blank : Γ) : Finset (Fin S) := by
+  classical
+  exact Finset.univ.filter (fun i => tape.cells i ≠ blank)
+
+/-- The current nonblank portion of a bounded tape uses at most its capacity. -/
+theorem BoundedTape.nonblankCells_card_le {Γ : Type*} {S : ℕ}
+    (tape : BoundedTape Γ S) (blank : Γ) :
+    (tape.nonblankCells blank).card ≤ S := by
+  classical
+  calc
+    (tape.nonblankCells blank).card ≤ Finset.univ.card :=
+      Finset.card_le_card (Finset.filter_subset _ _)
+    _ = S := by simp
+
+/-- The head and every cell it can scan lie inside the `S`-cell segment. -/
+theorem BoundedTape.head_prefix_size {Γ : Type*} {S : ℕ} (tape : BoundedTape Γ S) :
+    tape.head.val + 1 ≤ S := Nat.succ_le_of_lt tape.head.isLt
+
 /-- Move a head without leaving its finite tape segment. -/
 def moveHead (S : ℕ) (position : Fin S) : TapeMove → Option (Fin S)
   | .left =>
@@ -89,6 +110,11 @@ structure TMConfig (Q Γ : Type*) (k n S : ℕ) where
   state : Q
   inputHead : Fin (n + 2)
   workTapes : Fin k → BoundedTape Γ S
+
+/-- Every work-tape head in a configuration is within the declared capacity. -/
+theorem TMConfig.workHeadsWithinCapacity {Q Γ : Type*} {k n S : ℕ}
+    (cfg : TMConfig Q Γ k n S) : ∀ tape : Fin k, (cfg.workTapes tape).head.val < S :=
+  fun tape => (cfg.workTapes tape).head.isLt
 
 /-- A configuration is a finite product of its control, input head, and work
 tapes. -/

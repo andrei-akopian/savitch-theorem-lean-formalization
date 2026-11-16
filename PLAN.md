@@ -40,12 +40,13 @@ The abstract layer is implemented and builds successfully.
 | `SavitchLemma/BoundedReachability.lean` | Done | Exact/at-most paths, concatenation, positive power-of-two midpoint splitting, and finite-state shortening to at most `N` edges on `Fin (N + 1)`. |
 | `SavitchLemma/LemmaTwoCounterexample.lean` | Done | Lean-certified counterexample to the printed local Lemma 2 statement, including reachability from D0 and the deterministic continuation to a stuck state. |
 | `SavitchLemma/LemmasTwoThree.lean` | Done | Unified corrected Lemmas 2–3 (`2^j` for zero-based index `j`), the paper-shape corollaries, and abstract completeness using one extra work register. |
-| `SavitchLemma/MachineModel.lean` | In progress | Finite-capacity input/work tapes, finite-branching transitions, bounded acceptance, finite configurations, and a cardinality formula. |
-| `SavitchLemma/InstantaneousDesc.lean` | In progress | Embeds finite configurations into valid abstract codes, builds the induced transition problem, bounds concrete runs, and derives abstract tagged acceptance. |
+| `SavitchLemma/MachineModel.lean` | In progress | Finite-capacity input/work tapes, finite-branching transitions, bounded acceptance, finite configurations, a cardinality formula, and per-tape capacity bounds. |
+| `SavitchLemma/InstantaneousDesc.lean` | In progress | Embeds finite configurations into valid abstract codes, builds the induced transition problem, bounds concrete runs, and derives abstract tagged acceptance at a ceiling-log register budget. |
 
 `SavitchLemma.lean` imports these modules without the broad `Mathlib` umbrella.
-The finite-capacity machine model is in place, but it is not yet connected to
-abstract IDs or to the space-bound statement of Theorem 1.
+The finite-capacity machine model is connected to abstract IDs and register
+completeness. It is not yet related to standard unbounded-tape space semantics,
+or to a concrete deterministic tape simulator for Theorem 1.
 
 ### Abstract code and indexing choices
 
@@ -158,10 +159,11 @@ In `MachineModel.lean`:
 - Give nondeterministic transitions finite branching, configurations, initial
   configurations, and acceptance.
 - Use `Fin S → Γ` plus a `Fin S` head for each bounded work tape; the current
-  model exposes the finite configuration type and its cardinality.
+  model exposes the finite configuration type and its cardinality. Each head
+  remains in range, and the current nonblank-cell set has size at most `S`.
 - Define the space bound to match Savitch's “nonblank portion” convention.
-  Prove that the finite-capacity tape semantics faithfully represents an
-  execution scanning at most `S` work-tape cells, including its boundary and
+  Still needed: relate a standard unbounded-tape computation that scans at most
+  `S` cells to the finite-capacity semantics, including boundary and
   initial-head conventions.
 - Define acceptance within storage and measurable space functions.
 
@@ -178,6 +180,8 @@ In `InstantaneousDesc.lean`:
 - `acceptingRun_is_tagged_abstractly` combines that path with abstract
   completeness to tag an accepting ID when `2^r` covers the configuration
   count plus one.
+- `acceptsWithinCapacity_abstractly` chooses `r = Nat.clog 2 (card + 1)` and
+  gives the corresponding ceiling-log register budget directly.
 - Still needed: prove the finite-capacity model matches the paper's space
   convention and connect `r` to the original space bound with explicit
   logarithm ceilings.

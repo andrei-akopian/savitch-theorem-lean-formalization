@@ -1,6 +1,7 @@
 module
 
 public import Mathlib.Data.Fintype.EquivFin
+public import Mathlib.Data.Nat.Log
 public import SavitchLemma.BoundedReachability
 public import SavitchLemma.LemmasTwoThree
 public import SavitchLemma.MachineModel
@@ -169,6 +170,71 @@ theorem acceptingRun_is_tagged_abstractly {Q InputAlphabet Γ : Type*} {k n : �
   obtain ⟨final, hFinalRun, hTag, hCode⟩ :=
     savitch_abstract_completeness problem hN r sourceCode targetCode hPath
   exact ⟨final, hFinalRun, hTag, hCode, hAccept⟩
+
+/-- Specialize the abstract completeness transfer to the ceiling logarithm of
+the finite configuration count. -/
+theorem acceptingRun_is_tagged_at_clog {Q InputAlphabet Γ : Type*} {k n : ℕ}
+    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
+    (M : MultitapeNTM Q InputAlphabet Γ k) (input : Fin n → InputAlphabet)
+    (capacity : ℕ) (hCapacity : 0 < capacity)
+    (target : TMConfig Q Γ k n capacity)
+    (hRun : Relation.ReflTransGen (M.step input capacity)
+      (M.initialConfig capacity hCapacity) target)
+    (hAccept : M.accepting target.state) :
+    ∃ final : ZDConfig
+        (Nat.clog 2 (Fintype.card (TMConfig Q Γ k n capacity) + 1) + 1)
+        (Fintype.card (TMConfig Q Γ k n capacity) + 1),
+      Relation.ReflTransGen
+        (fun a b => zdStep (multitapeProblem M input capacity)
+          (tmConfig_card_succ_gt_one M n capacity hCapacity) a = some b)
+        (zdInitial
+          (Nat.clog 2 (Fintype.card (TMConfig Q Γ k n capacity) + 1) + 1)
+          (Fintype.card (TMConfig Q Γ k n capacity) + 1)
+          (tmConfig_card_succ_gt_one M n capacity hCapacity)
+          (finiteConfigCode (TMConfig Q Γ k n capacity)
+            (M.initialConfig (n := n) capacity hCapacity))) final ∧
+      final.tag
+        (Fin.last (Nat.clog 2 (Fintype.card (TMConfig Q Γ k n capacity) + 1))).castSucc = true ∧
+      final.x
+        (Fin.last (Nat.clog 2 (Fintype.card (TMConfig Q Γ k n capacity) + 1))).castSucc =
+          (finiteConfigCode (TMConfig Q Γ k n capacity) target).val ∧
+      M.accepting target.state := by
+  exact acceptingRun_is_tagged_abstractly M input capacity
+    (Nat.clog 2 (Fintype.card (TMConfig Q Γ k n capacity) + 1))
+    hCapacity target hRun hAccept
+    (Nat.le_pow_clog (by decide : 1 < 2) _)
+
+/-- Any accepting bounded-capacity computation yields a tagged accepting ID in
+the abstract deterministic register machine at the ceiling-log register
+budget. -/
+theorem acceptsWithinCapacity_abstractly {Q InputAlphabet Γ : Type*} {k n : ℕ}
+    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
+    (M : MultitapeNTM Q InputAlphabet Γ k) (input : Fin n → InputAlphabet)
+    (capacity : ℕ) (hCapacity : 0 < capacity)
+    (hAccepts : M.AcceptsWithinCapacity input capacity hCapacity) :
+    ∃ (target : TMConfig Q Γ k n capacity)
+      (final : ZDConfig
+        (Nat.clog 2 (Fintype.card (TMConfig Q Γ k n capacity) + 1) + 1)
+        (Fintype.card (TMConfig Q Γ k n capacity) + 1)),
+      M.accepting target.state ∧
+      Relation.ReflTransGen
+        (fun a b => zdStep (multitapeProblem M input capacity)
+          (tmConfig_card_succ_gt_one M n capacity hCapacity) a = some b)
+        (zdInitial
+          (Nat.clog 2 (Fintype.card (TMConfig Q Γ k n capacity) + 1) + 1)
+          (Fintype.card (TMConfig Q Γ k n capacity) + 1)
+          (tmConfig_card_succ_gt_one M n capacity hCapacity)
+          (finiteConfigCode (TMConfig Q Γ k n capacity)
+            (M.initialConfig (n := n) capacity hCapacity))) final ∧
+      final.tag
+        (Fin.last (Nat.clog 2 (Fintype.card (TMConfig Q Γ k n capacity) + 1))).castSucc = true ∧
+      final.x
+        (Fin.last (Nat.clog 2 (Fintype.card (TMConfig Q Γ k n capacity) + 1))).castSucc =
+          (finiteConfigCode (TMConfig Q Γ k n capacity) target).val := by
+  rcases hAccepts with ⟨target, hRun, hAccept⟩
+  obtain ⟨final, hDetRun, hTag, hCode, _⟩ :=
+    acceptingRun_is_tagged_at_clog M input capacity hCapacity target hRun hAccept
+  exact ⟨target, final, hAccept, hDetRun, hTag, hCode⟩
 
 /-- The initial configuration has a valid abstract code. -/
 noncomputable def initialConfigCode {Q InputAlphabet Γ : Type*} {k : ℕ}
