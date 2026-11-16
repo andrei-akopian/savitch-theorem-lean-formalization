@@ -32,6 +32,17 @@ theorem zdStep_of_successful_test (P : AbstractProblem N) (hN : 1 < N)
   classical
   simp [zdStep, hFind, hTest]
 
+/-- If D1's selected register has no tagged predecessor, control goes to D3. -/
+theorem zdStep_backtracks_when_test_fails (P : AbstractProblem N) (hN : 1 < N)
+    (cfg : ZDConfig r N) (j : Fin r) (hFind : firstUntagged cfg = some j)
+    (hFail : ¬ ∃ i : Fin (r + 1), cfg.tag i = true ∧
+      (cfg.x i = cfg.x j.castSucc ∨ P.step (cfg.x i) (cfg.x j.castSucc))) :
+    zdStep P hN cfg = zdBacktrack hN cfg := by
+  classical
+  unfold zdStep
+  rw [hFind]
+  simp [hFail]
+
 /-- A tag-sound computation cannot D2-tag the reserved maximum code. -/
 theorem zdStep_backtracks_at_max (P : AbstractProblem N) (hN : 1 < N)
     (source : ValidCode N) (cfg : ZDConfig r N) (j : Fin r)

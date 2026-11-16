@@ -8,6 +8,7 @@ public import SavitchLemma.Reachability
 public import SavitchLemma.StepBehavior
 public import SavitchLemma.Termination
 public import SavitchLemma.LemmaOne
+public import SavitchLemma.BoundedReachability
 
 /-!
 # Savitch's theorem

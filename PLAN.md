@@ -37,6 +37,7 @@ The abstract layer is implemented and builds successfully.
 | `SavitchLemma/StepBehavior.lean` | Done | D1/D2/D3 control-flow and exact D3 update shape. |
 | `SavitchLemma/Termination.lean` | Done | Decreasing colexicographic remaining-capacity measure; every run reaches a stuck configuration; stuck configurations have all work registers at `N`. |
 | `SavitchLemma/LemmaOne.lean` | Done | Lemma 1's two outcomes, progress invariant, and `lemma_one`. |
+| `SavitchLemma/BoundedReachability.lean` | In progress | Exact/at-most paths, concatenation, and midpoint splitting are proved; finite-state path shortening remains. |
 
 `SavitchLemma.lean` imports these modules. No machine model, ID encoding, or
 Theorem 1 proof has been connected yet.
@@ -70,7 +71,7 @@ SavitchLemma/
 ├── StepBehavior.lean                     # D1/D2/D3 transition lemmas
 ├── Termination.lean                      # Well-founded progress and stuck states
 ├── LemmaOne.lean                         # Lemma 1 (complete)
-├── BoundedReachability.lean              # Finite path lengths and path shortening [next]
+├── BoundedReachability.lean              # Finite path lengths and path shortening [in progress]
 ├── LemmasTwoThree.lean                   # Simultaneous divide-and-conquer induction
 ├── MachineModel.lean                     # Read-only input + bounded work tapes + NTM
 ├── InstantaneousDesc.lean                # IDs, code embedding, configuration count
@@ -96,7 +97,7 @@ Abstract register proofs ─────────────────┘
 
 ## Remaining work, in dependency order
 
-### 1. Bounded graph reachability — next
+### 1. Bounded graph reachability — in progress
 
 In `BoundedReachability.lean`:
 
@@ -106,6 +107,9 @@ In `BoundedReachability.lean`:
 - Prove finite-state path shortening: if one valid code reaches another, a
   path with no repeated intermediate code suffices, hence the path length is
   bounded by the number of valid codes.
+
+The exact path-length API, at-most bounds, concatenation, and power-of-two
+midpoint split are already proved in `BoundedReachability.lean`.
 
 Keep this graph-level API independent from the Turing machine. It will support
 both Lemmas 2–3 and the configuration-count bound used by Theorem 1.
@@ -121,6 +125,19 @@ In `LemmasTwoThree.lean`:
   statement. The paper uses one-based register `j` and a `2^j` path bound; with
   Lean index `j - 1`, this corresponds to `2^(j.val + 1)` unless the statement
   is deliberately reparameterized.
+
+**Source-consistency gate:** Do not formalize the printed Lemma 2 statement
+until its hypotheses are reconciled with the implemented D0–D3 machine. A
+small finite simulation gives a suspicious case with `N = 5`, `r = 2`,
+`I₀ = 1`, and transitions `1 → 2 → 3`. At the reachable configuration
+`<3, 4, 1>, <0, 0, 1>`, the premise for paper index `j = 1` holds: the tagged
+source reaches the target in two steps (`2^1`), while the target register's
+tag is clear. But D1 has no tagged predecessor for `3`; D3 increments the
+target through the maximum and the run eventually reaches all registers at
+`N` without tagging `3`. This appears to contradict the local conclusion as
+printed on p. 183. Recheck the PDF's exponent and all implicit configuration
+conditions (or the intended D1–D3 semantics) before choosing a correction; do
+not silently weaken the bound or strengthen the hypotheses.
 
 ### 3. Multitape nondeterministic machine model
 
