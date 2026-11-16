@@ -41,6 +41,19 @@ theorem firstBelowMax_eq_some_iff (cfg : ZDConfig r N) (j : Fin r) :
   rw [← Fin.find?_eq_find?_finRange, Fin.find?_eq_some_iff]
   simp
 
+/-- Every register preceding the one selected by D3 contains the maximum code. -/
+theorem firstBelowMax_prefix_max (cfg : ZDConfig r N) (j : Fin r)
+    (hFind : firstBelowMax cfg = some j) :
+    ∀ i : Fin r, i < j → cfg.x i.castSucc = maxCode N := by
+  have hMin := (firstBelowMax_eq_some_iff cfg j).mp hFind
+  intro i hij
+  have hNotBelow := hMin.2 i hij
+  apply Fin.ext
+  change (cfg.x i.castSucc).val = N
+  exact Nat.le_antisymm
+    (Nat.le_of_lt_succ (cfg.x i.castSucc).isLt)
+    (Nat.le_of_not_gt hNotBelow)
+
 /-- If D3 finds no register below the maximum, every working register is at
 the maximum. -/
 theorem firstBelowMax_eq_none_iff (cfg : ZDConfig r N) :
