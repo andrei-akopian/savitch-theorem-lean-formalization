@@ -42,6 +42,7 @@ The abstract layer is implemented and builds successfully.
 | `SavitchLemma/LemmasTwoThree.lean` | Done | Unified corrected Lemmas 2–3 (`2^j` for zero-based index `j`), the paper-shape corollaries, and abstract completeness using one extra work register. |
 | `SavitchLemma/MachineModel.lean` | In progress | Finite-capacity input/work tapes, finite-branching transitions, bounded acceptance, finite configurations, a cardinality formula, and per-tape capacity bounds. |
 | `SavitchLemma/InstantaneousDesc.lean` | In progress | Embeds finite configurations into valid abstract codes, builds the induced transition problem, bounds concrete runs, and derives abstract tagged acceptance at a ceiling-log register budget. |
+| `SavitchLemma/SpaceAnalysis.lean` | In progress | Bounds the configuration count exponentially in capacity and proves an abstract accepting-run transfer with quadratic register-storage proxy under `n ≤ 2^S`. |
 
 `SavitchLemma.lean` imports these modules without the broad `Mathlib` umbrella.
 The finite-capacity machine model is connected to abstract IDs and register
@@ -86,6 +87,7 @@ SavitchLemma/
 ├── LemmasTwoThree.lean                   # Corrected simultaneous induction and abstract completeness
 ├── MachineModel.lean                     # Finite-capacity input/work tapes + NTM [in progress]
 ├── InstantaneousDesc.lean                # IDs, code embedding, configuration count
+├── SpaceAnalysis.lean                     # Configuration-count and register-space arithmetic
 ├── MainTheorem.lean                      # Theorem 1 and space analysis
 └── Mazes.lean                            # Optional Section 3 / Theorems 4–5
 ```
@@ -182,6 +184,12 @@ In `InstantaneousDesc.lean`:
   count plus one.
 - `acceptsWithinCapacity_abstractly` chooses `r = Nat.clog 2 (card + 1)` and
   gives the corresponding ceiling-log register budget directly.
+- `SpaceAnalysis.lean` bounds the configuration count exponentially in `S`
+  under `n ≤ 2^S`, then proves that `(r + 2) * (codeWidth + 1)` is quadratic
+  in `S + 1` for fixed control/alphabet/tape parameters. Here `r` and
+  `codeWidth` are the ceiling-log configuration-count bounds.
+- `acceptsWithinCapacity_abstractly_with_space_bound` combines the bounded
+  machine run, abstract ID path, corrected Lemmas 2–3, and storage arithmetic.
 - Still needed: prove the finite-capacity model matches the paper's space
   convention and connect `r` to the original space bound with explicit
   logarithm ceilings.
@@ -190,10 +198,11 @@ In `InstantaneousDesc.lean`:
 
 In `MainTheorem.lean`:
 
-- Connect bounded NTM computations to the abstract graph and obtain a short
-  accepting path from the finite-ID bound.
-- Apply Lemmas 1–3 to show the deterministic algorithm discovers an accepting
-  ID; then formalize the accepting version of D2.
+- The abstract finite-capacity acceptance transfer is available from
+  `SpaceAnalysis.lean`.
+- Still needed: model the deterministic register algorithm as a tape machine,
+  connect the finite-capacity semantics to the paper's standard space
+  convention, and formalize the accepting version of D2.
 - Prove the measurable-space case first, including the register/tape space
   calculation and alphabet compression.
 - Formalize the non-measurable iterative-deepening argument separately, using

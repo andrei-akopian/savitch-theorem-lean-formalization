@@ -6,6 +6,7 @@ public import Mathlib.Data.Fintype.Card
 public import Mathlib.Data.Fintype.Pi
 public import Mathlib.Data.Fintype.Prod
 public import Mathlib.Data.Finset.Card
+public import Mathlib.Data.Finset.Lattice.Fold
 public import Mathlib.Logic.Relation
 
 import Mathlib.Tactic.Positivity
@@ -115,6 +116,20 @@ structure TMConfig (Q Γ : Type*) (k n S : ℕ) where
 theorem TMConfig.workHeadsWithinCapacity {Q Γ : Type*} {k n S : ℕ}
     (cfg : TMConfig Q Γ k n S) : ∀ tape : Fin k, (cfg.workTapes tape).head.val < S :=
   fun tape => (cfg.workTapes tape).head.isLt
+
+/-- The size of the scanned prefix of the work tapes in a configuration.  On
+each one-sided tape this includes every square from the origin to its head. -/
+def TMConfig.scannedPrefix {Q Γ : Type*} {k n S : ℕ}
+    (cfg : TMConfig Q Γ k n S) : ℕ :=
+  Finset.univ.sup (fun tape : Fin k => (cfg.workTapes tape).head.val + 1)
+
+/-- Every configuration at capacity `S` scans at most `S` squares per tape. -/
+theorem TMConfig.scannedPrefix_le_capacity {Q Γ : Type*} {k n S : ℕ}
+    (cfg : TMConfig Q Γ k n S) : cfg.scannedPrefix ≤ S := by
+  unfold TMConfig.scannedPrefix
+  apply Finset.sup_le
+  intro tape _
+  exact BoundedTape.head_prefix_size (cfg.workTapes tape)
 
 /-- A configuration is a finite product of its control, input head, and work
 tapes. -/
