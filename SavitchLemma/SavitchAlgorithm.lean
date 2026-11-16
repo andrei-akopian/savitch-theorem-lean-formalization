@@ -2,6 +2,7 @@ module
 
 import Mathlib.Data.Fin.Basic
 import Mathlib.Data.List.Basic
+import Mathlib.Logic.Relation
 
 /-!
 # Abstract register machine for Savitch's algorithm
@@ -117,5 +118,120 @@ noncomputable def zdStep (P : AbstractProblem N) (hN : 1 < N)
       exact some (updateAndReset hN cfg j (cfg.x j.castSucc) true)
     else
       exact zdBacktrack hN cfg
+
+/-- A tag is sound when its register contains a code reachable from the
+distinguished source in the abstract transition graph. -/
+def TagsSound (P : AbstractProblem N) (source : Fin (N + 1))
+    (cfg : ZDConfig r N) : Prop :=
+  ∀ i, cfg.tag i = true → Relation.ReflTransGen P.step source (cfg.x i)
+
+/-- Append one graph edge (or no edge, when the codes are equal) to a path. -/
+theorem reaches_of_eq_or_step (P : AbstractProblem N) {source a b : Fin (N + 1)}
+    (hReach : Relation.ReflTransGen P.step source a)
+    (hNext : a = b ∨ P.step a b) :
+    Relation.ReflTransGen P.step source b := by
+  rcases hNext with hEq | hEdge
+  · simpa [hEq] using hReach
+  · exact hReach.trans (Relation.ReflTransGen.single hEdge)
+
+/-- The update operation preserves soundness of all tags, provided any newly
+set tag is justified by a path from the source. -/
+theorem updateAndReset_preserves_tags (P : AbstractProblem N)
+    (source : Fin (N + 1)) (cfg : ZDConfig r N)
+    (hSound : TagsSound P source cfg) (hN : 1 < N) (j : Fin r)
+    (value : Fin (N + 1)) (newTag : Bool)
+    (hNew : newTag = true → Relation.ReflTransGen P.step source value) :
+    TagsSound P source (updateAndReset hN cfg j value newTag) := by
+  intro i hi
+  by_cases hEq : i.val = j.val
+  · have hTag : newTag = true := by
+      simpa [updateAndReset, hEq] using hi
+    simpa [updateAndReset, hEq] using hNew hTag
+  · by_cases hLt : i.val < j.val
+    · simp [updateAndReset, hEq, hLt] at hi
+    · have hTag : cfg.tag i = true := by
+        simpa [updateAndReset, hEq, hLt] using hi
+      simpa [updateAndReset, hEq, hLt] using hSound i hTag
+
+/-- D3 only clears tags (or leaves later registers untouched), so it cannot
+introduce an unsound tag. -/
+theorem zdBacktrack_preserves_tags (P : AbstractProblem N) (hN : 1 < N)
+    (source : Fin (N + 1)) (cfg next : ZDConfig r N)
+    (hSound : TagsSound P source cfg)
+    (hNext : zdBacktrack hN cfg = some next) :
+    TagsSound P source next := by
+  unfold zdBacktrack at hNext
+  cases hFind : firstBelowMax cfg with
+  | none => simp [hFind] at hNext
+  | some j =>
+    by_cases hLt : (cfg.x j.castSucc).val < N
+    · have hEq :
+          updateAndReset hN cfg j
+              ⟨(cfg.x j.castSucc).val + 1, Nat.succ_lt_succ hLt⟩ false = next := by
+        have hSome :
+            some (updateAndReset hN cfg j
+              ⟨(cfg.x j.castSucc).val + 1, Nat.succ_lt_succ hLt⟩ false) = some next := by
+          simpa [hFind, hLt] using hNext
+        exact Option.some.inj hSome
+      rw [← hEq]
+      apply updateAndReset_preserves_tags P source cfg hSound hN j _ false
+      simp
+    · simp [hFind, hLt] at hNext
+
+/-- One D1/D2/D3 pass preserves soundness of every register tag. -/
+theorem zdStep_preserves_tags (P : AbstractProblem N) (hN : 1 < N)
+    (source : Fin (N + 1)) (cfg next : ZDConfig r N)
+    (hSound : TagsSound P source cfg)
+    (hNext : zdStep P hN cfg = some next) :
+    TagsSound P source next := by
+  classical
+  unfold zdStep at hNext
+  cases hFind : firstUntagged cfg with
+  | none =>
+    exact zdBacktrack_preserves_tags P hN source cfg next hSound
+      (by simpa [hFind] using hNext)
+  | some j =>
+    by_cases hTest : ∃ i : Fin (r + 1), cfg.tag i = true ∧
+        (cfg.x i = cfg.x j.castSucc ∨ P.step (cfg.x i) (cfg.x j.castSucc))
+    · have hEq :
+          updateAndReset hN cfg j (cfg.x j.castSucc) true = next := by
+        have hSome :
+            some (updateAndReset hN cfg j (cfg.x j.castSucc) true) = some next := by
+          simpa [hFind, hTest] using hNext
+        exact Option.some.inj hSome
+      rw [← hEq]
+      apply updateAndReset_preserves_tags P source cfg hSound hN j
+        (cfg.x j.castSucc) true
+      intro _
+      rcases hTest with ⟨i, hiTag, hEdge⟩
+      exact reaches_of_eq_or_step P (hSound i hiTag) hEdge
+    · exact zdBacktrack_preserves_tags P hN source cfg next hSound
+        (by simpa [hFind, hTest] using hNext)
+
+/-- The initial D0 configuration has sound tags: only the source register is
+tagged, and its value is reachable from itself by a zero-step path. -/
+theorem zdInitial_tags_sound (P : AbstractProblem N) (r : ℕ) (hN : 1 < N)
+    (source : ValidCode N) :
+    TagsSound P source.val (zdInitial r N hN source) := by
+  intro i hi
+  by_cases hLast : i.val = r
+  · have hIndex : i = Fin.last r := by
+      apply Fin.ext
+      simpa using hLast
+    subst i
+    rw [zdInitial_source]
+  · simp [zdInitial, hLast] at hi
+
+/-- Soundness holds throughout every finite execution of the abstract machine. -/
+theorem zd_soundness (P : AbstractProblem N) (r : ℕ) (hN : 1 < N)
+    (source : ValidCode N) {cfg : ZDConfig r N}
+    (hRun : Relation.ReflTransGen
+      (fun a b : ZDConfig r N => zdStep P hN a = some b)
+      (zdInitial r N hN source) cfg) :
+    TagsSound P source.val cfg := by
+  induction hRun with
+  | refl => exact zdInitial_tags_sound P r hN source
+  | @tail prev current hRun hStep ih =>
+    exact zdStep_preserves_tags P hN source.val prev current ih hStep
 
 end SavitchLemma
