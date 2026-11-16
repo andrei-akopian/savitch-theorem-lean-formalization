@@ -6,6 +6,8 @@ public import SavitchLemma.Selection
 public import SavitchLemma.ConfigUpdates
 public import SavitchLemma.Reachability
 public import SavitchLemma.StepBehavior
+public import SavitchLemma.Termination
+public import SavitchLemma.LemmaOne
 
 /-!
 # Savitch's theorem
