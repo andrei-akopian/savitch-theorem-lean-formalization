@@ -38,6 +38,7 @@ The abstract layer is implemented and builds successfully.
 | `SavitchLemma/Termination.lean` | Done | Decreasing colexicographic remaining-capacity measure; every run reaches a stuck configuration; stuck configurations have all work registers at `N`. |
 | `SavitchLemma/LemmaOne.lean` | Done | Lemma 1's two outcomes, progress invariant, and `lemma_one`. |
 | `SavitchLemma/BoundedReachability.lean` | In progress | Exact/at-most paths, concatenation, and midpoint splitting are proved; finite-state path shortening remains. |
+| `SavitchLemma/LemmaTwoCounterexample.lean` | Done | Lean-certified counterexample to the printed local Lemma 2 statement, including reachability from D0 and the deterministic continuation to a stuck state. |
 
 `SavitchLemma.lean` imports these modules. No machine model, ID encoding, or
 Theorem 1 proof has been connected yet.
@@ -72,6 +73,7 @@ SavitchLemma/
 ├── Termination.lean                      # Well-founded progress and stuck states
 ├── LemmaOne.lean                         # Lemma 1 (complete)
 ├── BoundedReachability.lean              # Finite path lengths and path shortening [in progress]
+├── LemmaTwoCounterexample.lean            # Certified source-statement counterexample
 ├── LemmasTwoThree.lean                   # Simultaneous divide-and-conquer induction
 ├── MachineModel.lean                     # Read-only input + bounded work tapes + NTM
 ├── InstantaneousDesc.lean                # IDs, code embedding, configuration count
@@ -126,18 +128,20 @@ In `LemmasTwoThree.lean`:
   Lean index `j - 1`, this corresponds to `2^(j.val + 1)` unless the statement
   is deliberately reparameterized.
 
-**Source-consistency gate:** Do not formalize the printed Lemma 2 statement
-until its hypotheses are reconciled with the implemented D0–D3 machine. A
-small finite simulation gives a suspicious case with `N = 5`, `r = 2`,
-`I₀ = 1`, and transitions `1 → 2 → 3`. At the reachable configuration
-`<3, 4, 1>, <0, 0, 1>`, the premise for paper index `j = 1` holds: the tagged
-source reaches the target in two steps (`2^1`), while the target register's
-tag is clear. But D1 has no tagged predecessor for `3`; D3 increments the
-target through the maximum and the run eventually reaches all registers at
-`N` without tagging `3`. This appears to contradict the local conclusion as
-printed on p. 183. Recheck the PDF's exponent and all implicit configuration
-conditions (or the intended D1–D3 semantics) before choosing a correction; do
-not silently weaken the bound or strengthen the hypotheses.
+**Source-consistency gate:** Do not formalize Lemmas 2–3 until their statement
+or the intended D0–D3 semantics is reconciled. The PDF image of printed p. 183
+confirms the bound is `2^j` (not an OCR artifact). More importantly,
+`LemmaTwoCounterexample.lean` now proves the contradiction in the current
+abstract model: with maximum code `N = 5` (so codes are in `Fin 6`), `r = 2`,
+valid codes `1` through `4`, and transitions `1 → 2 → 3`, the paper's
+configuration `<3, 4, 1>, <0, 0, 1>` is reachable from D0. Its premise holds
+for paper index `j = 1`, since the tagged source reaches `3` in two steps.
+The Lean proof follows the machine from that configuration to a stuck state
+and proves that register 1 never has value `3` tagged along any continuation.
+Thus this is no longer simulation-only evidence, and adding an unmentioned
+side condition would not be justified without checking the source. Pause here
+for a corrected statement or clarified machine semantics; do not silently
+change the exponent or strengthen the hypotheses.
 
 ### 3. Multitape nondeterministic machine model
 
