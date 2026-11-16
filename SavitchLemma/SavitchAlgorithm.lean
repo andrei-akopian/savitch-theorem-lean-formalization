@@ -1,8 +1,10 @@
 module
 
-import Mathlib.Data.Fin.Basic
-import Mathlib.Data.List.Basic
-import Mathlib.Logic.Relation
+public import Mathlib.Data.Fin.Basic
+public import Mathlib.Data.List.Basic
+public import Mathlib.Logic.Relation
+
+@[expose] public section
 
 /-!
 # Abstract register machine for Savitch's algorithm

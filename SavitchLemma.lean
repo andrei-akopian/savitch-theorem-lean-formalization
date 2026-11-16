@@ -1,7 +1,10 @@
 module
 
 import Mathlib
-import SavitchLemma.SavitchAlgorithm
+public import SavitchLemma.SavitchAlgorithm
+public import SavitchLemma.Selection
+public import SavitchLemma.ConfigUpdates
+public import SavitchLemma.Reachability
 
 /-!
 # Savitch's theorem
