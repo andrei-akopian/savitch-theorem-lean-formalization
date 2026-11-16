@@ -2,7 +2,7 @@ module
 
 public import Mathlib.Data.DFinsupp.WellFounded
 public import Mathlib.Order.PiLex
-public import Mathlib.Tactic
+import Mathlib.Tactic.Positivity
 public import SavitchLemma.StepBehavior
 
 @[expose] public section

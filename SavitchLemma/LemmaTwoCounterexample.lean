@@ -4,6 +4,9 @@ public import SavitchLemma.BoundedReachability
 public import SavitchLemma.LemmaOne
 public import SavitchLemma.StepBehavior
 
+import Mathlib.Tactic.FinCases
+import Mathlib.Tactic.Positivity
+
 @[expose] public section
 
 /-!

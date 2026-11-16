@@ -37,11 +37,12 @@ The abstract layer is implemented and builds successfully.
 | `SavitchLemma/StepBehavior.lean` | Done | D1/D2/D3 control-flow and exact D3 update shape. |
 | `SavitchLemma/Termination.lean` | Done | Decreasing colexicographic remaining-capacity measure; every run reaches a stuck configuration; stuck configurations have all work registers at `N`. |
 | `SavitchLemma/LemmaOne.lean` | Done | Lemma 1's two outcomes, progress invariant, and `lemma_one`. |
-| `SavitchLemma/BoundedReachability.lean` | In progress | Exact/at-most paths, concatenation, and midpoint splitting are proved; finite-state path shortening remains. |
+| `SavitchLemma/BoundedReachability.lean` | Done | Exact/at-most paths, concatenation, positive power-of-two midpoint splitting, and finite-state shortening to at most `N` edges on `Fin (N + 1)`. |
 | `SavitchLemma/LemmaTwoCounterexample.lean` | Done | Lean-certified counterexample to the printed local Lemma 2 statement, including reachability from D0 and the deterministic continuation to a stuck state. |
+| `SavitchLemma/LemmasTwoThree.lean` | Done | Unified corrected Lemmas 2–3 (`2^j` for zero-based index `j`), the paper-shape corollaries, and abstract completeness using one extra work register. |
 
-`SavitchLemma.lean` imports these modules. No machine model, ID encoding, or
-Theorem 1 proof has been connected yet.
+`SavitchLemma.lean` imports these modules without the broad `Mathlib` umbrella.
+No machine model or ID encoding has been connected yet.
 
 ### Abstract code and indexing choices
 
@@ -51,6 +52,10 @@ Theorem 1 proof has been connected yet.
 - In `LemmaOne.lean`, paper register `i` corresponds to Lean index `j = i - 1`.
   Outcome A writes the requested code to `j`; Outcome B tags the least
   initially-untagged register strictly to its right.
+- The corrected Lemmas 2–3 use the path bound `2 ^ j.val`, i.e. `2^(i-1)` for
+  the paper's one-based register `i`. `savitch_abstract_completeness` uses
+  `r + 1` work registers to handle paths of at most `2^r`; the extra register
+  does not change the asymptotic space bound.
 - The termination potential uses digit `2 * value + tag` and its remaining
   capacity `2 * N + 1 - digit`, ordered colexicographically with higher register
   indices more significant. Each machine step decreases this measure. This is
@@ -72,9 +77,9 @@ SavitchLemma/
 ├── StepBehavior.lean                     # D1/D2/D3 transition lemmas
 ├── Termination.lean                      # Well-founded progress and stuck states
 ├── LemmaOne.lean                         # Lemma 1 (complete)
-├── BoundedReachability.lean              # Finite path lengths and path shortening [in progress]
+├── BoundedReachability.lean              # Finite path lengths, midpoint splitting, path shortening
 ├── LemmaTwoCounterexample.lean            # Certified source-statement counterexample
-├── LemmasTwoThree.lean                   # Simultaneous divide-and-conquer induction
+├── LemmasTwoThree.lean                   # Corrected simultaneous induction and abstract completeness
 ├── MachineModel.lean                     # Read-only input + bounded work tapes + NTM
 ├── InstantaneousDesc.lean                # IDs, code embedding, configuration count
 ├── MainTheorem.lean                      # Theorem 1 and space analysis
@@ -99,51 +104,49 @@ Abstract register proofs ─────────────────┘
 
 ## Remaining work, in dependency order
 
-### 1. Bounded graph reachability — in progress
+### 1. Bounded graph reachability — done
 
 In `BoundedReachability.lean`:
 
 - Define exact-length and at-most-length paths over `AbstractProblem.step`.
 - Prove reflexivity, monotonicity in the bound, concatenation, and midpoint
   splitting for a path of length at most `2^m`.
-- Prove finite-state path shortening: if one valid code reaches another, a
-  path with no repeated intermediate code suffices, hence the path length is
-  bounded by the number of valid codes.
+- Prove finite-state path shortening: a shortest path has no repeated vertices,
+  hence a path on `Fin (N + 1)` has at most `N` edges.
 
-The exact path-length API, at-most bounds, concatenation, and power-of-two
-midpoint split are already proved in `BoundedReachability.lean`.
+The exact path-length API, at-most bounds, concatenation, positive-midpoint
+power-of-two splitting, and finite-state shortening are proved in
+`BoundedReachability.lean`.
 
 Keep this graph-level API independent from the Turing machine. It will support
 both Lemmas 2–3 and the configuration-count bound used by Theorem 1.
 
-### 2. Lemmas 2 and 3 — abstract algorithm
+### 2. Lemmas 2 and 3 — abstract algorithm — done
 
 In `LemmasTwoThree.lean`:
 
-- State both lemmas as predicates on `ZDConfig`, including untouched suffixes
-  and the tag conditions from pp. 183–184.
-- Prove them simultaneously by induction, using Lemma 1 and the midpoint split.
-- Derive the exact exponent/index mapping from the paper before fixing the Lean
-  statement. The paper uses one-based register `j` and a `2^j` path bound; with
-  Lean index `j - 1`, this corresponds to `2^(j.val + 1)` unless the statement
-  is deliberately reparameterized.
+- The unified `lemma_two_three` proves the corrected form with reset prefix,
+  tagged middle block, untouched suffix, and positive target code.
+- `lemma_two_corrected` and `lemma_three_corrected` are its empty/nonempty
+  middle-block corollaries.
+- `savitch_abstract_completeness` uses `r + 1` work registers to tag any target
+  reachable within `2^r` steps.
 
-**Source-consistency gate:** Do not formalize Lemmas 2–3 until their statement
-or the intended D0–D3 semantics is reconciled. The PDF image of printed p. 183
-confirms the bound is `2^j` (not an OCR artifact). More importantly,
-`LemmaTwoCounterexample.lean` now proves the contradiction in the current
-abstract model: with maximum code `N = 5` (so codes are in `Fin 6`), `r = 2`,
-valid codes `1` through `4`, and transitions `1 → 2 → 3`, the paper's
-configuration `<3, 4, 1>, <0, 0, 1>` is reachable from D0. Its premise holds
-for paper index `j = 1`, since the tagged source reaches `3` in two steps.
-The Lean proof follows the machine from that configuration to a stuck state
-and proves that register 1 never has value `3` tagged along any continuation.
-Thus this is no longer simulation-only evidence, and adding an unmentioned
-side condition would not be justified without checking the source. Pause here
-for a corrected statement or clarified machine semantics; do not silently
-change the exponent or strengthen the hypotheses.
+**Source-consistency resolution:** The PDF confirms that printed p. 183 says
+`2^j`; `LemmaTwoCounterexample.lean` certifies that this literal local claim is
+false at its `j = 1` base case for the encoded D0–D3 machine. As `review.md`
+diagnoses, the inductive step needs `j - 1` lower registers to hold the
+midpoint, while D1 itself checks only one transition. The formalization keeps
+the counterexample and uses the corrected bound `2^(j-1)` in one-based
+notation (`2^j.val` in Lean). `savitch_abstract_completeness` adds one work
+register so paths of up to `2^r` steps are still covered, without changing the
+asymptotic space bound; no unmentioned side condition is assumed.
 
-### 3. Multitape nondeterministic machine model
+The review's import cleanup was also applied: the umbrella no longer imports
+all of Mathlib, and the bounded-reachability and termination modules use
+targeted positivity/tactic imports.
+
+### 3. Multitape nondeterministic machine model — next
 
 In `MachineModel.lean`:
 

@@ -1,6 +1,5 @@
 module
 
-import Mathlib
 public import SavitchLemma.SavitchAlgorithm
 public import SavitchLemma.Selection
 public import SavitchLemma.ConfigUpdates
@@ -10,6 +9,7 @@ public import SavitchLemma.Termination
 public import SavitchLemma.LemmaOne
 public import SavitchLemma.BoundedReachability
 public import SavitchLemma.LemmaTwoCounterexample
+public import SavitchLemma.LemmasTwoThree
 
 /-!
 # Savitch's theorem
