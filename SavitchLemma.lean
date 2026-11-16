@@ -10,6 +10,8 @@ public import SavitchLemma.LemmaOne
 public import SavitchLemma.BoundedReachability
 public import SavitchLemma.LemmaTwoCounterexample
 public import SavitchLemma.LemmasTwoThree
+public import SavitchLemma.MachineModel
+public import SavitchLemma.InstantaneousDesc
 
 /-!
 # Savitch's theorem

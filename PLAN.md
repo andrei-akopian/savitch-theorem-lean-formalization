@@ -40,9 +40,12 @@ The abstract layer is implemented and builds successfully.
 | `SavitchLemma/BoundedReachability.lean` | Done | Exact/at-most paths, concatenation, positive power-of-two midpoint splitting, and finite-state shortening to at most `N` edges on `Fin (N + 1)`. |
 | `SavitchLemma/LemmaTwoCounterexample.lean` | Done | Lean-certified counterexample to the printed local Lemma 2 statement, including reachability from D0 and the deterministic continuation to a stuck state. |
 | `SavitchLemma/LemmasTwoThree.lean` | Done | Unified corrected Lemmas 2–3 (`2^j` for zero-based index `j`), the paper-shape corollaries, and abstract completeness using one extra work register. |
+| `SavitchLemma/MachineModel.lean` | In progress | Finite-capacity input/work tapes, finite-branching transitions, bounded acceptance, finite configurations, and a cardinality formula. |
+| `SavitchLemma/InstantaneousDesc.lean` | In progress | Embeds finite configurations into valid abstract codes, builds the induced transition problem, bounds concrete runs, and derives abstract tagged acceptance. |
 
 `SavitchLemma.lean` imports these modules without the broad `Mathlib` umbrella.
-No machine model or ID encoding has been connected yet.
+The finite-capacity machine model is in place, but it is not yet connected to
+abstract IDs or to the space-bound statement of Theorem 1.
 
 ### Abstract code and indexing choices
 
@@ -80,7 +83,7 @@ SavitchLemma/
 ├── BoundedReachability.lean              # Finite path lengths, midpoint splitting, path shortening
 ├── LemmaTwoCounterexample.lean            # Certified source-statement counterexample
 ├── LemmasTwoThree.lean                   # Corrected simultaneous induction and abstract completeness
-├── MachineModel.lean                     # Read-only input + bounded work tapes + NTM
+├── MachineModel.lean                     # Finite-capacity input/work tapes + NTM [in progress]
 ├── InstantaneousDesc.lean                # IDs, code embedding, configuration count
 ├── MainTheorem.lean                      # Theorem 1 and space analysis
 └── Mazes.lean                            # Optional Section 3 / Theorems 4–5
@@ -146,7 +149,7 @@ The review's import cleanup was also applied: the umbrella no longer imports
 all of Mathlib, and the bounded-reachability and termination modules use
 targeted positivity/tactic imports.
 
-### 3. Multitape nondeterministic machine model — next
+### 3. Multitape nondeterministic machine model — in progress
 
 In `MachineModel.lean`:
 
@@ -154,22 +157,30 @@ In `MachineModel.lean`:
   read/write work tapes.
 - Give nondeterministic transitions finite branching, configurations, initial
   configurations, and acceptance.
+- Use `Fin S → Γ` plus a `Fin S` head for each bounded work tape; the current
+  model exposes the finite configuration type and its cardinality.
 - Define the space bound to match Savitch's “nonblank portion” convention.
-  Validate the list-pair tape representation against head movement and blank
-  trimming before relying on it for the main theorem.
+  Prove that the finite-capacity tape semantics faithfully represents an
+  execution scanning at most `S` work-tape cells, including its boundary and
+  initial-head conventions.
 - Define acceptance within storage and measurable space functions.
 
-### 4. Instantaneous descriptions and finite bounds
+### 4. Instantaneous descriptions and finite bounds — in progress
 
 In `InstantaneousDesc.lean`:
 
-- Encode valid bounded-space configurations as IDs and embed those IDs into the
-  abstract code domain.
-- Prove that the induced transition relation satisfies the reserved-code
-  assumptions of `AbstractProblem`.
-- Prove a cardinality bound on valid IDs and instantiate the finite path
-  shortening result. Keep constants and logarithm ceilings explicit until the
-  final `O(L(n))` space statement.
+- `finiteConfigCode` uses `Fintype.equivFin` and a shifted finite index to embed
+  each bounded configuration type into `ValidCode`.
+- `multitapeProblem` induces the abstract transition relation and proves the
+  reserved zero/maximum codes cannot be transition targets.
+- `multitapeProblem_run_short_path` turns any bounded machine run into an
+  abstract path of at most `card(configuration) + 1` edges.
+- `acceptingRun_is_tagged_abstractly` combines that path with abstract
+  completeness to tag an accepting ID when `2^r` covers the configuration
+  count plus one.
+- Still needed: prove the finite-capacity model matches the paper's space
+  convention and connect `r` to the original space bound with explicit
+  logarithm ceilings.
 
 ### 5. Theorem 1
 
