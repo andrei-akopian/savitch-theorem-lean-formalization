@@ -222,9 +222,9 @@ In `MainTheorem.lean`:
 - The earlier flat architecture combined the machine model, IDs, all register
   lemmas, and the main theorem too early; the revised tree separates those
   proof layers and reflects the modules already present.
-- The earlier `0`-based Lemma 2/3 base-case suggestion did not establish the
-  exponent translation from the paper. The `2^(j.val + 1)` mapping must be
-  handled explicitly.
+- The literal printed Lemma 2/3 bound is off by one at the base case. The
+  formalized bound is `2^j.val` for zero-based Lean index `j`, and one extra
+  work register preserves the `2^r` path bound needed by the main theorem.
 - The earlier termination note understated D2's resets. The checked Lean proof
   uses a colexicographic remaining-capacity potential that accounts for both
   tags and register contents.
@@ -232,5 +232,5 @@ In `MainTheorem.lean`:
 ## Validation
 
 After each milestone, run `lake build` from the repository root. Keep the
-abstract results free of `sorry`/`admit`; do not connect the machine model to
-the algorithm until the code embedding and reserved-code proofs compile.
+abstract results free of `sorry`/`admit`; the machine-to-ID embedding and
+reserved-code proofs now compile and are covered by the project build.
