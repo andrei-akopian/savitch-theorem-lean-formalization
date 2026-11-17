@@ -12,6 +12,7 @@ public import SavitchLemma.Simulator.CheckValidAndStep
 public import SavitchLemma.Simulator.ReachableLoop
 public import SavitchLemma.Simulator.StepDriver
 public import SavitchLemma.Simulator.SavitchDriver
+public import SavitchLemma.Simulator.MainBridge
 
 @[expose] public section
 

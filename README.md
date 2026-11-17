@@ -16,8 +16,10 @@ layout are tracked in [`PLAN.md`](PLAN.md).
 
 The concrete tape backend is organized into focused alphabet, tape-operation,
 register-tape, and simulator modules. Its tape/register chains and current
-simulator primitives build; the top-level fixed-capacity simulator and
-Theorem 1 bridge remain unfinished. See
+simulator primitives build; the fixed-capacity D0–D3 simulator (`savitchSimulator`) is proved correct, and
+`Simulator/MainBridge.lean` compiles it to a `MultitapeDTM` given a ruler-building
+prefix. Building that prefix from a measurable `L` and the final Theorem 1
+statement remain unfinished. See
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the module map and status.
 
 ## Project layout

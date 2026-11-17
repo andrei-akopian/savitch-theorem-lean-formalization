@@ -168,6 +168,15 @@ scanner, end-to-end concrete `checkStep`, and fixed-capacity D0–D3 driver are
 still missing. This is not yet a proof of Theorem 1. The default abstract
 target does not import this unfinished backend.
 
+**Update:** the D0–D3 driver (`Simulator/SavitchDriver.lean`) is proved correct
+against `AcceptsWithinCapacity`, and `Simulator/MainBridge.lean` proves
+`savitchDTM_correct`: a prefix component `P` that builds the clean tapes (ruler
+`1^S`, `[leftMark]` elsewhere) from blank tapes, followed by `savitchSimulator`,
+compiles to a `MultitapeDTM` that accepts within space `B` iff `M` accepts within
+capacity `S`. **Next:** construct `P` from `IsMeasurable L` (simulate the measuring
+machine while marking visited cells on the ruler tape), choose `B` as an explicit
+`O(L(n)^2)` bound, and state Theorem 1 in `MainTheorem.lean`.
+
 ### 3. Multitape nondeterministic machine model — in progress
 
 In `MachineModel.lean`:
