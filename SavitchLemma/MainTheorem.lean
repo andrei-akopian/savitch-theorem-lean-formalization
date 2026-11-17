@@ -2,6 +2,7 @@ module
 
 public import SavitchLemma.Simulator.MainBridge
 public import SavitchLemma.SpaceAnalysis
+public import SavitchLemma.Simulator.RulerWriter
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 
@@ -115,5 +116,34 @@ theorem savitch_theorem_one {Q Γ InputAlphabet : Type} {k : ℕ}
       (by unfold savitchSpace; omega) (by unfold savitchSpace; omega)
       (by unfold savitchSpace; omega) (by unfold savitchSpace; omega)
       (by unfold savitchSpace; omega) hB).2 hNotCap hAcc
+
+/-- `L` is measurable by a single-tape deterministic machine over the simulator alphabet
+`SimSym` (with `SimSym.blank` as its blank). A general measuring machine reduces to this
+case by alphabet compression, which is not yet formalized. -/
+def IsMeasurableSim (InputAlphabet : Type) [Fintype InputAlphabet] (L : ℕ → ℕ) : Prop :=
+  ∃ (QD : Type) (_ : Fintype QD) (D : MultitapeDTM QD InputAlphabet SimSym 1),
+    D.blank = .blank ∧ ∀ (n : ℕ) (input : Fin n → InputAlphabet),
+      D.HaltsScanningExactly input (L n)
+
+theorem rulerWriter_of_measurableSim {InputAlphabet : Type} [Fintype InputAlphabet]
+    {L : ℕ → ℕ} (hMeas : IsMeasurableSim InputAlphabet L) (hL : ∀ n, 1 ≤ L n) :
+    RulerWriter InputAlphabet L := by
+  obtain ⟨QD, _, D, hBlank, hHalt⟩ := hMeas
+  refine ⟨RWState QD, inferInstance, rwComp D, 2, fun n input => ?_⟩
+  exact rw_prefix D hBlank input (L n) (hL n) (2 * (L n + 1)) (by have := hL n; omega)
+    (hHalt n input)
+
+/-- **Theorem 1** for spaces measurable over the simulator alphabet. -/
+theorem savitch_theorem_one_measurable {Q Γ InputAlphabet : Type} {k : ℕ}
+    [Fintype Q] [Fintype Γ] [Fintype InputAlphabet]
+    (M : MultitapeNTM Q InputAlphabet Γ k)
+    (A : ∀ n : ℕ, (Fin n → InputAlphabet) → Prop) (L : ℕ → ℕ)
+    (hMeas : IsMeasurableSim InputAlphabet L)
+    (hL : ∀ n, 1 ≤ L n ∧ n ≤ 2 ^ L n)
+    (hM : M.AcceptsLanguageWithinSpace A L) :
+    ∃ (QD : Type) (_ : Fintype QD) (D : MultitapeDTM QD InputAlphabet SimSym 5)
+      (L' : ℕ → ℕ) (C : ℕ),
+      D.AcceptsLanguageWithinSpace A L' ∧ ∀ n, L' n ≤ C * (L n + 1) ^ 2 :=
+  savitch_theorem_one M A L (rulerWriter_of_measurableSim hMeas fun n => (hL n).1) hL hM
 
 end SavitchLemma

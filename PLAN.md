@@ -177,10 +177,15 @@ capacity `S`. `MainTheorem.lean` then proves `savitch_theorem_one`: given `Ruler
 (a prefix `P` building the clean tapes within `c*(L n+1)` squares), `1 ≤ L n`,
 `n ≤ 2^L n`, and an NTM accepting `A` within space `L`, a 5-tape DTM accepts `A`
 within space `savitchSpace n ≤ C*(L n+1)^2`.
-**Next:** prove `IsMeasurable L → RulerWriter L` (simulate the measuring DTM with
-each symbol encoded as a block of `gammaBits` cells on `tScratch`, mark visited cells
-on `tRuler`, then clear the scratch tape and cap the ruler with `endMark`); then the
-non-measurable case by iterative deepening. Build with
+`Simulator/RulerWriter.lean` proves `rw_prefix`: for a single-tape DTM `D` over `SimSym`
+(blank = `SimSym.blank`) that halts scanning exactly `S` squares, the component `rwComp D`
+runs `D` on `tScratch` (shifted one cell), marks visited cells on `tRuler`, clears the
+scratch tape, caps the ruler with `endMark`, and rewinds. `MainTheorem.lean` combines this
+into `savitch_theorem_one_measurable` (hypothesis `IsMeasurableSim`).
+**Next:** (1) alphabet compression, i.e. `IsMeasurable L → IsMeasurableSim L` (encode each
+work symbol in blocks of `SimSym` cells); (2) the non-measurable case by iterative
+deepening; (3) relate `MultitapeDTM.AcceptsLanguageWithinSpace` to the paper's
+space-complexity statement and add the umbrella import for `MainTheorem`. Build with
 `lake build SavitchLemma.MainTheorem` (not in the default target).
 
 ### 3. Multitape nondeterministic machine model — in progress

@@ -18,8 +18,10 @@ The concrete tape backend is organized into focused alphabet, tape-operation,
 register-tape, and simulator modules. Its tape/register chains and current
 simulator primitives build; the fixed-capacity D0–D3 simulator (`savitchSimulator`) is proved correct, and
 `Simulator/MainBridge.lean` compiles it to a `MultitapeDTM` given a ruler-building
-prefix. Building that prefix from a measurable `L` and the final Theorem 1
-statement remain unfinished. See
+prefix. `Simulator/RulerWriter.lean` builds that prefix from a measuring machine over the
+simulator alphabet, and `MainTheorem.lean` states Theorem 1 for that measurable case
+(`savitch_theorem_one_measurable`). Alphabet compression for arbitrary measuring
+machines and the non-measurable case remain unfinished. See
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the module map and status.
 
 ## Project layout
