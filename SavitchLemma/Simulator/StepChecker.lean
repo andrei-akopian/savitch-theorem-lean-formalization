@@ -745,7 +745,8 @@ theorem readHeadBlock_reachesExit {InputAlphabet : Type*} {n : ℕ} (startIdx : 
         (SimSym.leftMark :: List.replicate S (SimSym.bit true) ++ [SimSym.endMark]) 1 ∧
       TapeMatches (finalTapes tArgA) (pA ++ uA ++ sA) (pA.length + ua.length) ∧
       TapeMatches (finalTapes tArgB) (pB ++ uB ++ sB) (pB.length + ub.length) ∧
-      TapeMatches (finalTapes tScratch) (SimSym.leftMark :: uA ++ [SimSym.endMark]) 1 := by
+      TapeMatches (finalTapes tScratch) (SimSym.leftMark :: uA ++ [SimSym.endMark]) 1 ∧
+      finalTapes tRegs = initTapes tRegs := by
   rcases copyHeadBitsRel_reachesExit startIdx hIdx input bound S pA uA sA pB uB sB ua ub
       hUA hUB hUA_syms hUB_syms hBoundR hBoundA hBoundB hBoundS initTapes inHead hOther
       hMatchR hMatchA hMatchB hMatchS with
@@ -842,7 +843,7 @@ theorem readHeadBlock_reachesExit {InputAlphabet : Type*} {n : ℕ} (startIdx : 
   have hRun : (readHeadBlock InputAlphabet startIdx).ReachesExit input bound initTapes inHead
       (BitRelState.init.runList ua ub) finalTapes inHead := by
     simpa [readHeadBlock] using hBoundRun
-  refine ⟨finalTapes, hRun, ?_, ?_, ?_, ?_⟩
+  refine ⟨finalTapes, hRun, ?_, ?_, ?_, ?_, ?_⟩
   · have hNe : tRuler ≠ tScratch := by decide
     rw [hOthersS tRuler hNe]
     simpa [rulerContents, rulerBits, List.map_replicate, List.cons_append] using hMatchR1
@@ -855,5 +856,9 @@ theorem readHeadBlock_reachesExit {InputAlphabet : Type*} {n : ℕ} (startIdx : 
     rw [hOthersS tArgB hNeS, hOthersR tArgB hNeR]
     simpa [copiedTapes, tRuler, tArgA, tArgB, tScratch] using hCB
   · simpa [scratchContents, hUA_syms, List.append_assoc] using hMatchS1
+  · have hNeS : tRegs ≠ tScratch := by decide
+    have hNeR : tRegs ≠ tRuler := by decide
+    rw [hOthersS tRegs hNeS, hOthersR tRegs hNeR]
+    rfl
 
 end SavitchLemma
