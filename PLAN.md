@@ -69,27 +69,32 @@ or to a concrete deterministic tape simulator for Theorem 1.
 
 ## Planned file structure
 
-Keep the current small abstract modules at the root of `SavitchLemma/`. Add the
-remaining modules as their proofs become ready; avoid empty placeholder files.
+Keep the abstract theorem modules at the root of `SavitchLemma/`. Group the
+concrete backend by tape primitives, register-tape operations, and simulator
+components; avoid empty placeholder files. See
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full module map.
 
 ```text
 SavitchLemma.lean                         # Public umbrella
 SavitchLemma/
 ├── SavitchAlgorithm.lean                 # Abstract register machine and soundness
-├── Selection.lean                        # Finite least-index searches
-├── ConfigUpdates.lean                    # Register update behavior
-├── Reachability.lean                     # Reserved codes / abstract graph facts
-├── StepBehavior.lean                     # D1/D2/D3 transition lemmas
-├── Termination.lean                      # Well-founded progress and stuck states
-├── LemmaOne.lean                         # Lemma 1 (complete)
-├── BoundedReachability.lean              # Finite path lengths, midpoint splitting, path shortening
-├── LemmaTwoCounterexample.lean            # Certified source-statement counterexample
-├── LemmasTwoThree.lean                   # Corrected simultaneous induction and abstract completeness
-├── MachineModel.lean                     # Finite-capacity input/work tapes + NTM [in progress]
-├── InstantaneousDesc.lean                # IDs, code embedding, configuration count
-├── SpaceAnalysis.lean                     # Configuration-count and register-space arithmetic
-├── MainTheorem.lean                      # Theorem 1 and space analysis
-└── Mazes.lean                            # Optional Section 3 / Theorems 4–5
+├── Selection.lean, ConfigUpdates.lean     # Register update helpers
+├── Reachability.lean, StepBehavior.lean   # Abstract graph and transition facts
+├── Termination.lean, LemmaOne.lean        # Termination and Lemma 1
+├── BoundedReachability.lean               # Finite paths and midpoint splitting
+├── LemmaTwoCounterexample.lean             # Certified source-statement counterexample
+├── LemmasTwoThree.lean                    # Corrected induction and completeness
+├── MachineModel.lean                      # Finite-capacity tapes and NTM
+├── InstantaneousDesc.lean                 # IDs and configuration encoding
+├── SpaceAnalysis.lean                     # Configuration-count and storage bounds
+├── TapePrimitives.lean                    # Compatibility facade
+├── Tape/                                  # Alphabet, tape actions, and primitives
+├── RegisterTapeOps.lean                   # Compatibility facade
+├── RegisterTape/                          # Register layout and operations
+├── SavitchSimulator.lean                  # Compatibility facade
+├── Simulator/                             # Initialization, loops, step checker
+├── MainTheorem.lean                       # Future: Theorem 1 end-to-end
+└── Mazes.lean                             # Future: optional Section 3 / Theorems 4–5
 ```
 
 Dependency outline:
@@ -140,17 +145,23 @@ In `LemmasTwoThree.lean`:
 
 **Source-consistency resolution:** The PDF confirms that printed p. 183 says
 `2^j`; `LemmaTwoCounterexample.lean` certifies that this literal local claim is
-false at its `j = 1` base case for the encoded D0–D3 machine. As `review.md`
-diagnoses, the inductive step needs `j - 1` lower registers to hold the
-midpoint, while D1 itself checks only one transition. The formalization keeps
-the counterexample and uses the corrected bound `2^(j-1)` in one-based
-notation (`2^j.val` in Lean). `savitch_abstract_completeness` adds one work
-register so paths of up to `2^r` steps are still covered, without changing the
-asymptotic space bound; no unmentioned side condition is assumed.
+false at its `j = 1` base case for the encoded D0–D3 machine. The inductive step
+needs `j - 1` lower registers to hold the midpoint, while D1 itself checks only
+one transition. The formalization keeps the counterexample and uses the
+corrected bound `2^(j-1)` in one-based notation (`2^j.val` in Lean).
+`savitch_abstract_completeness` adds one work register so paths of up to `2^r`
+steps are still covered, without changing the asymptotic space bound; no
+unmentioned side condition is assumed.
 
-The review's import cleanup was also applied: the umbrella no longer imports
-all of Mathlib, and the bounded-reachability and termination modules use
-targeted positivity/tactic imports.
+The public umbrella imports project modules explicitly rather than importing
+all of Mathlib. Tactic imports remain targeted to the modules that use them.
+
+The concrete tape and register-tape implementation is grouped under `Tape/`
+and `RegisterTape/`; both chains compile through their compatibility facades.
+The simulator is grouped under `Simulator/` and compiles through `Loops.lean`.
+`StepChecker.lean` still has proof errors, so the concrete simulator facade is
+not yet buildable. The default abstract target does not import this unfinished
+backend.
 
 ### 3. Multitape nondeterministic machine model — in progress
 

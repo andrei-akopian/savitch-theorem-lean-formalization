@@ -14,6 +14,19 @@ The abstract register machine, tag-soundness invariant, termination argument,
 and Savitch Lemma 1 are formalized. The remaining milestones and current module
 layout are tracked in [`PLAN.md`](PLAN.md).
 
+The concrete tape backend is organized into focused alphabet, tape-operation,
+register-tape, and simulator modules. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+for the module map and import conventions.
+
+## Project layout
+
+- `SavitchLemma.lean` is the public umbrella for the abstract proofs.
+- `SavitchLemma/` contains the abstract algorithm, reachability, and machine model.
+- `SavitchLemma/Tape/`, `SavitchLemma/RegisterTape/`, and
+  `SavitchLemma/Simulator/` contain the concrete backend in smaller modules.
+- The original `TapePrimitives`, `RegisterTapeOps`, and `SavitchSimulator` module
+  paths remain as compatibility facades.
+
 ## Build
 
 With elan installed, from this directory run:
