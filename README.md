@@ -1,5 +1,8 @@
 # Savitch's lemma in Lean
 
+> [!WARNING]
+> Project is currently pure AI slop produced by a combination of Sonnet 5.5, GPT6 Luna, and Gemini 4 Hydrongen. I haven't checked anything by hand at all.
+
 Lean 4 project using Mathlib. The Lean toolchain and Mathlib are pinned to
 `v4.35.0` so the project builds reproducibly.
 
