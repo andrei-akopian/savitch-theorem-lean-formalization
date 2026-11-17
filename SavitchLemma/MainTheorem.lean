@@ -1,0 +1,119 @@
+module
+
+public import SavitchLemma.Simulator.MainBridge
+public import SavitchLemma.SpaceAnalysis
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.Linarith
+
+@[expose] public section
+
+/-!
+# Theorem 1 (measurable case, modulo a ruler writer)
+
+If `L` is a space function for which the clean-tape prefix of the simulator can be
+built within `O(L(n))` space (`RulerWriter`), `L(n) ≥ 1`, and `n ≤ 2^L(n)`, then every
+language accepted by a nondeterministic multitape machine within space `L` is accepted
+by a deterministic machine within space `O(L(n)^2)`.
+-/
+
+set_option synthInstance.maxSize 200000
+set_option synthInstance.maxHeartbeats 2000000
+
+namespace SavitchLemma
+
+/-- The prefix component can build the clean simulator tapes (ruler `1^{L n}`) from blank
+tapes within `c * (L n + 1)` work squares, on every input. -/
+def RulerWriter (InputAlphabet : Type) [Fintype InputAlphabet] (L : ℕ → ℕ) : Prop :=
+  ∃ (QP : Type) (_ : Fintype QP) (P : TMComponent QP InputAlphabet SimSym 5 Unit) (c : ℕ),
+    ∀ (n : ℕ) (input : Fin n → InputAlphabet),
+      ∃ (initTapes : Fin 5 → OneSidedTape SimSym) (inHead : Fin (n + 2)),
+        PrefixPrepares P input (L n) (c * (L n + 1)) initTapes inHead
+
+theorem PrefixPrepares.mono {QP InputAlphabet : Type*} {n : ℕ}
+    {P : TMComponent QP InputAlphabet SimSym 5 Unit} {input : Fin n → InputAlphabet}
+    {S B B' : ℕ} {initTapes : Fin 5 → OneSidedTape SimSym} {inHead : Fin (n + 2)}
+    (h : PrefixPrepares P input S B initTapes inHead) (hB : B ≤ B') :
+    PrefixPrepares P input S B' initTapes inHead := by
+  obtain ⟨hR, rest⟩ := h
+  refine ⟨?_, rest⟩
+  unfold TMComponent.ReachesExit at hR ⊢
+  have key : ∀ a b, Relation.ReflTransGen
+      (fun a b => P.CompStep input a b ∧
+        (∀ t, (a.workTapes t).head < (fun _ => B) t) ∧
+        (∀ t, (b.workTapes t).head < (fun _ => B) t)) a b →
+      Relation.ReflTransGen
+      (fun a b => P.CompStep input a b ∧
+        (∀ t, (a.workTapes t).head < (fun _ => B') t) ∧
+        (∀ t, (b.workTapes t).head < (fun _ => B') t)) a b := by
+    intro a b h
+    induction h with
+    | refl => exact Relation.ReflTransGen.refl
+    | tail _ h ih =>
+      exact ih.tail ⟨h.1, fun t => lt_of_lt_of_le (h.2.1 t) hB,
+        fun t => lt_of_lt_of_le (h.2.2 t) hB⟩
+  exact key _ _ hR
+
+/-- Space used by the compiled deterministic machine at capacity `S`. -/
+def savitchSpace (Q Γ : Type) [Fintype Q] [Fintype Γ] (k c S : ℕ) : ℕ :=
+  c * (S + 1) + (S + 4) +
+    (1 + (configBitWidth Q Γ k S + 1) * (configBitWidth Q Γ k S + 2) +
+      (configBitWidth Q Γ k S + 3)) + (configBitWidth Q Γ k S + 2)
+
+theorem savitchSpace_quadratic (Q Γ : Type) [Fintype Q] [Fintype Γ] (k c : ℕ) :
+    ∃ C, ∀ S, savitchSpace Q Γ k c S ≤ C * (S + 1) ^ 2 := by
+  set m := (qBits Q + 4) + (1 + k * (1 + gammaBits Γ)) + 2 with hm
+  refine ⟨c + 10 + m * m + m, fun S => ?_⟩
+  have hW : configBitWidth Q Γ k S + 2 ≤ m * (S + 1) := by
+    rw [configBitWidth_eq_linear]
+    rw [hm]; nlinarith
+  unfold savitchSpace
+  generalize configBitWidth Q Γ k S = W at hW ⊢
+  have hT : 1 ≤ S + 1 := by omega
+  have h1 : S + 1 ≤ (S + 1) ^ 2 := by nlinarith
+  have h2 : 1 ≤ (S + 1) ^ 2 := by nlinarith
+  have h3 : (W + 2) * (W + 2) ≤ (m * m) * (S + 1) ^ 2 := by
+    calc (W + 2) * (W + 2) ≤ (m * (S + 1)) * (m * (S + 1)) := Nat.mul_le_mul hW hW
+      _ = (m * m) * (S + 1) ^ 2 := by ring
+  have h4 : W + 2 ≤ m * (S + 1) ^ 2 := by
+    calc W + 2 ≤ m * (S + 1) := hW
+      _ ≤ m * (S + 1) ^ 2 := Nat.mul_le_mul_left _ h1
+  have h5 : c * (S + 1) ≤ c * (S + 1) ^ 2 := Nat.mul_le_mul_left _ h1
+  nlinarith
+
+/-- **Theorem 1**, measurable case relative to a ruler writer. -/
+theorem savitch_theorem_one {Q Γ InputAlphabet : Type} {k : ℕ}
+    [Fintype Q] [Fintype Γ] [Fintype InputAlphabet]
+    (M : MultitapeNTM Q InputAlphabet Γ k)
+    (A : ∀ n : ℕ, (Fin n → InputAlphabet) → Prop) (L : ℕ → ℕ)
+    (hRW : RulerWriter InputAlphabet L)
+    (hL : ∀ n, 1 ≤ L n ∧ n ≤ 2 ^ L n)
+    (hM : M.AcceptsLanguageWithinSpace A L) :
+    ∃ (QD : Type) (_ : Fintype QD) (D : MultitapeDTM QD InputAlphabet SimSym 5)
+      (L' : ℕ → ℕ) (C : ℕ),
+      D.AcceptsLanguageWithinSpace A L' ∧ ∀ n, L' n ≤ C * (L n + 1) ^ 2 := by
+  obtain ⟨QP, _, P, c, hP⟩ := hRW
+  obtain ⟨C, hC⟩ := savitchSpace_quadratic Q Γ k c
+  refine ⟨_, inferInstance, savitchDTM P M, fun n => savitchSpace Q Γ k c (L n), C,
+    ⟨fun n input hA => ?_, fun n input hAcc => ?_⟩, fun n => hC (L n)⟩
+  · obtain ⟨initTapes, inHead, hPrep⟩ := hP n input
+    have hCap := (M.acceptsOneSidedWithin_iff_acceptsWithinCapacity input (L n)
+      (by have := (hL n).1; omega)).1 (hM.1 n input hA)
+    have hB := hPrep.mono (B' := savitchSpace Q Γ k c (L n)) (by unfold savitchSpace; omega)
+    exact (savitchDTM_correct P M input (L n) _ (hL n).1 (hL n).2
+      (by unfold savitchSpace; omega) (by unfold savitchSpace; omega)
+      (by unfold savitchSpace; omega) (by unfold savitchSpace; omega)
+      (by unfold savitchSpace; omega) hB).1 hCap
+  · by_contra hNotA
+    obtain ⟨initTapes, inHead, hPrep⟩ := hP n input
+    have hNotM : ¬ M.AcceptsOneSided input := fun h => hNotA (hM.2 n input h)
+    have hNotCap : ¬ M.AcceptsWithinCapacity input (L n) (by have := (hL n).1; omega) :=
+      fun h => hNotM (M.acceptsOneSided_of_acceptsOneSidedWithin input (L n)
+        ((M.acceptsOneSidedWithin_iff_acceptsWithinCapacity input (L n)
+          (by have := (hL n).1; omega)).2 h))
+    have hB := hPrep.mono (B' := savitchSpace Q Γ k c (L n)) (by unfold savitchSpace; omega)
+    exact (savitchDTM_correct P M input (L n) _ (hL n).1 (hL n).2
+      (by unfold savitchSpace; omega) (by unfold savitchSpace; omega)
+      (by unfold savitchSpace; omega) (by unfold savitchSpace; omega)
+      (by unfold savitchSpace; omega) hB).2 hNotCap hAcc
+
+end SavitchLemma

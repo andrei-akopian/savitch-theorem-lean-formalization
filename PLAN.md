@@ -173,9 +173,15 @@ against `AcceptsWithinCapacity`, and `Simulator/MainBridge.lean` proves
 `savitchDTM_correct`: a prefix component `P` that builds the clean tapes (ruler
 `1^S`, `[leftMark]` elsewhere) from blank tapes, followed by `savitchSimulator`,
 compiles to a `MultitapeDTM` that accepts within space `B` iff `M` accepts within
-capacity `S`. **Next:** construct `P` from `IsMeasurable L` (simulate the measuring
-machine while marking visited cells on the ruler tape), choose `B` as an explicit
-`O(L(n)^2)` bound, and state Theorem 1 in `MainTheorem.lean`.
+capacity `S`. `MainTheorem.lean` then proves `savitch_theorem_one`: given `RulerWriter L`
+(a prefix `P` building the clean tapes within `c*(L n+1)` squares), `1 ≤ L n`,
+`n ≤ 2^L n`, and an NTM accepting `A` within space `L`, a 5-tape DTM accepts `A`
+within space `savitchSpace n ≤ C*(L n+1)^2`.
+**Next:** prove `IsMeasurable L → RulerWriter L` (simulate the measuring DTM with
+each symbol encoded as a block of `gammaBits` cells on `tScratch`, mark visited cells
+on `tRuler`, then clear the scratch tape and cap the ruler with `endMark`); then the
+non-measurable case by iterative deepening. Build with
+`lake build SavitchLemma.MainTheorem` (not in the default target).
 
 ### 3. Multitape nondeterministic machine model — in progress
 
