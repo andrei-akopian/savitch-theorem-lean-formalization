@@ -40,10 +40,14 @@ implementation is divided by dependency and responsibility, keeping each Lean
 file focused enough to inspect and iterate on independently.
 
 The tape and register-tape chains compile through their compatibility facades.
-The simulator chain currently compiles through `Simulator.Loops`; the
-`Simulator.StepChecker` proof is still in progress and prevents
-`SavitchLemma.SavitchSimulator` from compiling. The default public target does
-not import this backend.
+The simulator chain now compiles through `Simulator.StepChecker`, including
+`copyHeadBitsRel_reachesExit`, `readHeadBlock_reachesExit`, and the
+input-head-move postprocessor. `Simulator.Core` also defines bounded-tape
+transition summaries and proves the finite summary checker equivalent to
+`MultitapeNTM.step`. These are verified primitives/specifications, not a
+complete fixed-capacity Savitch driver: the serialized control/symbol scanner,
+end-to-end concrete `checkStep`, and top-level D0–D3 component remain future
+work. The default public target does not import this backend.
 
 ## Concrete backend dependency flow
 
@@ -85,7 +89,5 @@ invariants first, followed by operations and their higher-level compositions.
 
 Use the pinned Lean toolchain and run `lake build` from the repository root to
 check the default abstract target. Check the concrete layers explicitly with
-`lake build SavitchLemma.TapePrimitives SavitchLemma.RegisterTapeOps`; the full
-simulator target is still blocked by `Simulator.StepChecker`. Compile an
-individual module with `lake env lean path/to/Module.lean` when iterating on one
-file.
+`lake build SavitchLemma.SavitchSimulator`. Compile an individual module with
+`lake env lean path/to/Module.lean` when iterating on one file.

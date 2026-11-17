@@ -15,8 +15,10 @@ and Savitch Lemma 1 are formalized. The remaining milestones and current module
 layout are tracked in [`PLAN.md`](PLAN.md).
 
 The concrete tape backend is organized into focused alphabet, tape-operation,
-register-tape, and simulator modules. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-for the module map and import conventions.
+register-tape, and simulator modules. Its tape/register chains and current
+simulator primitives build; the top-level fixed-capacity simulator and
+Theorem 1 bridge remain unfinished. See
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the module map and status.
 
 ## Project layout
 

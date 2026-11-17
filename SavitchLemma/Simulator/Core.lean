@@ -385,4 +385,159 @@ def TapeSummary.matchesAction {Γ : Type*} [DecidableEq Γ] (ts : TapeSummary Γ
     | .stay => ts.stayValid
     | .right => ts.rightValid
 
+/-- The transition summary observable from a pair of bounded work tapes:
+`ok` checks preservation away from the old head, `scanned` and `written` are
+the old and new symbols at that head, and the validity flags record the new
+head position for each possible movement. -/
+noncomputable def TapeSummary.ofBoundedTapes {Γ : Type*} [Fintype Γ] [DecidableEq Γ]
+    {S : ℕ} (before after : BoundedTape Γ S) : TapeSummary Γ := by
+  classical
+  exact
+    { ok := decide (∀ i, i ≠ before.head → after.cells i = before.cells i)
+      scanned := before.cells before.head
+      written := after.cells before.head
+      leftValid := decide (∃ next, moveHead S before.head .left = some next ∧ after.head = next)
+      stayValid := decide (∃ next, moveHead S before.head .stay = some next ∧ after.head = next)
+      rightValid := decide (∃ next, moveHead S before.head .right = some next ∧ after.head = next) }
+
+/-- A summary matches a proposed symbol write and head movement exactly when
+the bounded tape update produces `after`. -/
+theorem TapeSummary.ofBoundedTapes_matchesAction_iff {Γ : Type*}
+    [Fintype Γ] [DecidableEq Γ] {S : ℕ} (before after : BoundedTape Γ S)
+    (written : Γ) (movement : TapeMove) :
+    (TapeSummary.ofBoundedTapes before after).matchesAction written movement = true ↔
+      before.updateAndMove written movement = some after := by
+  classical
+  have hUpdate : before.updateAndMove written movement = some after ↔
+      ∃ next, moveHead S before.head movement = some next ∧ after.head = next ∧
+        ∀ i, after.cells i = if i = before.head then written else before.cells i := by
+    unfold BoundedTape.updateAndMove
+    cases hMove : moveHead S before.head movement with
+    | none => simp
+    | some next =>
+      cases after with
+      | mk cells head =>
+        simp only [Option.some.injEq, BoundedTape.mk.injEq]
+        constructor
+        · intro h
+          rcases h with ⟨hCells, hHead⟩
+          refine ⟨next, rfl, hHead.symm, ?_⟩
+          intro i
+          exact (congrFun hCells i).symm
+        · rintro ⟨next', hNext, hHead, hCells⟩
+          have hNextEq : next = next' := hNext
+          constructor
+          · funext i
+            exact (hCells i).symm
+          · exact hNextEq.trans hHead.symm
+  constructor
+  · intro hMatch
+    have hParts := hMatch
+    simp only [TapeSummary.matchesAction, Bool.and_eq_true] at hParts
+    rcases hParts with ⟨⟨hOk, hWritten⟩, hValid⟩
+    have hPres : ∀ i, i ≠ before.head → after.cells i = before.cells i := by
+      have hPres' := of_decide_eq_true (by simpa [TapeSummary.ofBoundedTapes] using hOk)
+      exact hPres'
+    have hAtHead : after.cells before.head = written := by
+      have hWriteEq := of_decide_eq_true hWritten
+      simpa [TapeSummary.ofBoundedTapes] using hWriteEq
+    have hCells : ∀ i, after.cells i = if i = before.head then written else before.cells i := by
+      intro i
+      by_cases hi : i = before.head
+      · subst i
+        simp [hAtHead]
+      · simp [hi, hPres i hi]
+    have hMoveValid : ∃ next, moveHead S before.head movement = some next ∧ after.head = next := by
+      revert hValid
+      cases movement with
+      | left =>
+        intro hValid
+        exact of_decide_eq_true (by simpa [TapeSummary.ofBoundedTapes] using hValid)
+      | stay =>
+        intro hValid
+        exact of_decide_eq_true (by simpa [TapeSummary.ofBoundedTapes] using hValid)
+      | right =>
+        intro hValid
+        exact of_decide_eq_true (by simpa [TapeSummary.ofBoundedTapes] using hValid)
+    rcases hMoveValid with ⟨next, hMove, hHead⟩
+    exact hUpdate.mpr ⟨next, hMove, hHead, hCells⟩
+  · intro hUpdateResult
+    rcases hUpdate.mp hUpdateResult with ⟨next, hMove, hHead, hCells⟩
+    have hOk : (TapeSummary.ofBoundedTapes before after).ok = true := by
+      apply (Bool.decide_iff _).2
+      intro i hi
+      simpa [hi] using hCells i
+    have hWritten : (TapeSummary.ofBoundedTapes before after).written = written := by
+      simp [TapeSummary.ofBoundedTapes, hCells]
+    have hPres : ∀ i, i ≠ before.head → after.cells i = before.cells i := by
+      change decide (∀ i, i ≠ before.head → after.cells i = before.cells i) = true at hOk
+      exact of_decide_eq_true hOk
+    have hAtHead : after.cells before.head = written := by
+      change after.cells before.head = written at hWritten
+      exact hWritten
+    cases movement with
+    | left =>
+      have hFlag : (TapeSummary.ofBoundedTapes before after).leftValid = true := by
+        change decide (∃ next, moveHead S before.head .left = some next ∧
+          after.head = next) = true
+        exact (Bool.decide_iff _).2 ⟨next, hMove, hHead⟩
+      simp [TapeSummary.matchesAction, hOk, hWritten, hFlag]
+    | stay =>
+      have hFlag : (TapeSummary.ofBoundedTapes before after).stayValid = true := by
+        change decide (∃ next, moveHead S before.head .stay = some next ∧
+          after.head = next) = true
+        exact (Bool.decide_iff _).2 ⟨next, hMove, hHead⟩
+      simp [TapeSummary.matchesAction, hOk, hWritten, hFlag]
+    | right =>
+      have hFlag : (TapeSummary.ofBoundedTapes before after).rightValid = true := by
+        change decide (∃ next, moveHead S before.head .right = some next ∧
+          after.head = next) = true
+        exact (Bool.decide_iff _).2 ⟨next, hMove, hHead⟩
+      simp [TapeSummary.matchesAction, hOk, hWritten, hFlag]
+
+/-- Finite transition-table checker specified using the per-tape summaries.
+The serialized scanner will eventually compute these same summary fields. -/
+noncomputable def MultitapeNTM.checkStepSummary
+    {Q InputAlphabet Γ : Type*} {k n : ℕ}
+    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
+    (M : MultitapeNTM Q InputAlphabet Γ k) (input : Fin n → InputAlphabet)
+    (S : ℕ) (before after : TMConfig Q Γ k n S) : Bool := by
+  classical
+  exact (M.transitions before.state (readInput input before.inputHead) before.scannedWork).any
+    (fun action =>
+      decide (after.state = action.nextState) &&
+      decide (moveHead (n + 2) before.inputHead action.inputMove = some after.inputHead) &&
+      decide (∀ tape, (TapeSummary.ofBoundedTapes (before.workTapes tape)
+        (after.workTapes tape)).matchesAction (action.write tape) (action.workMove tape) = true))
+
+/-- The summary checker is equivalent to one transition of the bounded NTM. -/
+theorem MultitapeNTM.checkStepSummary_correct
+    {Q InputAlphabet Γ : Type*} {k n : ℕ}
+    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
+    (M : MultitapeNTM Q InputAlphabet Γ k) (input : Fin n → InputAlphabet)
+    (S : ℕ) (before after : TMConfig Q Γ k n S) :
+    M.checkStepSummary input S before after = true ↔ M.step input S before after := by
+  classical
+  unfold MultitapeNTM.checkStepSummary MultitapeNTM.step
+  simp only [List.any_eq_true, Bool.and_eq_true, decide_eq_true_eq]
+  constructor
+  · rintro ⟨action, hAction, hCheck⟩
+    rcases hCheck with ⟨hStateAndMove, hTapeSummaries⟩
+    rcases hStateAndMove with ⟨hState, hInputMove⟩
+    refine ⟨action, hAction, hState, after.inputHead, hInputMove, rfl, ?_⟩
+    intro tape
+    exact (TapeSummary.ofBoundedTapes_matchesAction_iff
+      (before.workTapes tape) (after.workTapes tape) (action.write tape)
+      (action.workMove tape)).mp (hTapeSummaries tape)
+  · rintro ⟨action, hAction, hState, inputHead, hInputMove, hInputHead, hTapes⟩
+    have hInputMove' :
+        moveHead (n + 2) before.inputHead action.inputMove = some after.inputHead := by
+      rw [← hInputHead] at hInputMove
+      exact hInputMove
+    refine ⟨action, hAction, ⟨hState, hInputMove'⟩, ?_⟩
+    intro tape
+    exact (TapeSummary.ofBoundedTapes_matchesAction_iff
+      (before.workTapes tape) (after.workTapes tape) (action.write tape)
+      (action.workMove tape)).mpr (hTapes tape)
+
 end SavitchLemma

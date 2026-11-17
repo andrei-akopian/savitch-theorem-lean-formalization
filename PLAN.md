@@ -158,10 +158,15 @@ all of Mathlib. Tactic imports remain targeted to the modules that use them.
 
 The concrete tape and register-tape implementation is grouped under `Tape/`
 and `RegisterTape/`; both chains compile through their compatibility facades.
-The simulator is grouped under `Simulator/` and compiles through `Loops.lean`.
-`StepChecker.lean` still has proof errors, so the concrete simulator facade is
-not yet buildable. The default abstract target does not import this unfinished
-backend.
+The simulator is grouped under `Simulator/` and builds through
+`StepChecker.lean`, including `copyHeadBitsRel_reachesExit` and
+`readHeadBlock_reachesExit`. The proposed-input-move postprocessor is now a
+proved `TMComponent`, and the finite transition-table specification using
+`TapeSummary` is proved equivalent to `MultitapeNTM.step`. These provide the
+input-head and per-tape semantic checks, but the serialized control/symbol
+scanner, end-to-end concrete `checkStep`, and fixed-capacity D0–D3 driver are
+still missing. This is not yet a proof of Theorem 1. The default abstract
+target does not import this unfinished backend.
 
 ### 3. Multitape nondeterministic machine model — in progress
 
