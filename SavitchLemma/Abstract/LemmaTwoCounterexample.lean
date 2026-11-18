@@ -1,8 +1,8 @@
 module
 
-public import SavitchLemma.BoundedReachability
-public import SavitchLemma.LemmaOne
-public import SavitchLemma.StepBehavior
+public import SavitchLemma.Abstract.BoundedReachability
+public import SavitchLemma.Abstract.LemmaOne
+public import SavitchLemma.Abstract.StepBehavior
 
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.Positivity

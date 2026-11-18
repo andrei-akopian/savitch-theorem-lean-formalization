@@ -4,7 +4,7 @@ public import SavitchLemma.Simulator.ReachableLoop
 public import SavitchLemma.RegisterTape.FindUntagged
 public import SavitchLemma.RegisterTape.Tag
 public import SavitchLemma.RegisterTape.Increment
-public import SavitchLemma.AcceptingZD
+public import SavitchLemma.Abstract.AcceptingZD
 
 @[expose] public section
 

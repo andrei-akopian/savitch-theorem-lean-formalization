@@ -1,6 +1,6 @@
 module
 
-public import SavitchLemma.Simulator.ConfigValidity
+public import SavitchLemma.Simulator.Valid.ConfigValidity
 
 @[expose] public section
 

@@ -1,22 +1,25 @@
 module
 
 public import SavitchLemma.Simulator.MainBridge
-public import SavitchLemma.SpaceAnalysis
-public import SavitchLemma.Simulator.RulerWriter
-public import SavitchLemma.Simulator.AlphabetCompression
-public import SavitchLemma.Simulator.IterativeDeepening
+public import SavitchLemma.Model.SpaceAnalysis
+public import SavitchLemma.SpaceBounds.RulerWriter
+public import SavitchLemma.SpaceBounds.AlphabetCompression
+public import SavitchLemma.SpaceBounds.IterativeDeepening
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 
 @[expose] public section
 
 /-!
-# Theorem 1 (measurable case, modulo a ruler writer)
+# Theorem 1 (Savitch's Theorem)
 
-If `L` is a space function for which the clean-tape prefix of the simulator can be
-built within `O(L(n))` space (`RulerWriter`), `L(n) ≥ 1`, and `n ≤ 2^L(n)`, then every
-language accepted by a nondeterministic multitape machine within space `L` is accepted
-by a deterministic machine within space `O(L(n)^2)`.
+Formalizes Savitch's Theorem (`NSPACE(L) ⊆ DSPACE(L^2)` for `L(n) ≥ 1` and `n ≤ 2^L(n)`):
+- `savitch_theorem_one`: relative to a `RulerWriter` prefix component.
+- `savitch_theorem_one_measurable`: for space functions measurable over `SimSym`.
+- `savitch_theorem_one_of_measurable`: for space functions measurable over any finite alphabet
+  (via `AlphabetCompression`).
+- `savitch_theorem_one_full`: for arbitrary (non-measurable) space bounds `L` (via
+  `IterativeDeepening`).
 -/
 
 set_option synthInstance.maxSize 200000
@@ -120,8 +123,8 @@ theorem savitch_theorem_one {Q Γ InputAlphabet : Type} {k : ℕ}
       (by unfold savitchSpace; omega) hB).2 hNotCap hAcc
 
 /-- `L` is measurable by a single-tape deterministic machine over the simulator alphabet
-`SimSym` (with `SimSym.blank` as its blank). A general measuring machine reduces to this
-case by alphabet compression, which is not yet formalized. -/
+`SimSym` (with `SimSym.blank` as its blank). General finite alphabets reduce to this via
+`AlphabetCompression` (`savitch_theorem_one_of_measurable`). -/
 def IsMeasurableSim (InputAlphabet : Type) [Fintype InputAlphabet] (L : ℕ → ℕ) : Prop :=
   ∃ (QD : Type) (_ : Fintype QD) (D : MultitapeDTM QD InputAlphabet SimSym 1),
     D.blank = .blank ∧ ∀ (n : ℕ) (input : Fin n → InputAlphabet),

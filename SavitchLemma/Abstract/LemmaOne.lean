@@ -1,6 +1,6 @@
 module
 
-public import SavitchLemma.Termination
+public import SavitchLemma.Abstract.Termination
 
 @[expose] public section
 

@@ -1,6 +1,6 @@
 module
 
-public import SavitchLemma.AcceptingZD
+public import SavitchLemma.Abstract.AcceptingZD
 public import SavitchLemma.TapePrimitives
 
 @[expose] public section

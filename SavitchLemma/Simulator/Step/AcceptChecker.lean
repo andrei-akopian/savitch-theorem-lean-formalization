@@ -1,6 +1,6 @@
 module
 
-public import SavitchLemma.Simulator.StepScanner
+public import SavitchLemma.Simulator.Step.StepScanner
 
 @[expose] public section
 

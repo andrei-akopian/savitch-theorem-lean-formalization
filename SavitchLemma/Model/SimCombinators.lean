@@ -1,8 +1,8 @@
 module
 
-public import SavitchLemma.ConcreteEncoding
+public import SavitchLemma.Model.ConcreteEncoding
 public import SavitchLemma.RegisterTapeOps
-public import SavitchLemma.TMCombinators
+public import SavitchLemma.Model.TMCombinators
 public import SavitchLemma.TapePrimitives
 
 @[expose] public section

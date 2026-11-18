@@ -1,7 +1,7 @@
 module
 
 public import SavitchLemma.Tape.Alphabet
-public import SavitchLemma.TMCombinators
+public import SavitchLemma.Model.TMCombinators
 
 @[expose] public section
 

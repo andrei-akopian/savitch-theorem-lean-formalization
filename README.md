@@ -14,27 +14,22 @@ source of truth for formulas and typography.
 ## Progress
 
 The abstract register machine, tag-soundness invariant, termination argument,
-and Savitch Lemma 1 are formalized. The remaining milestones and current module
-layout are tracked in [`PLAN.md`](PLAN.md).
-
-The concrete tape backend is organized into focused alphabet, tape-operation,
-register-tape, and simulator modules. Its tape/register chains and current
-simulator primitives build; the fixed-capacity D0–D3 simulator (`savitchSimulator`) is proved correct, and
-`Simulator/MainBridge.lean` compiles it to a `MultitapeDTM` given a ruler-building
-prefix. `Simulator/RulerWriter.lean` builds that prefix from a measuring machine over the
-simulator alphabet, and `MainTheorem.lean` states Theorem 1 for that measurable case
-(`savitch_theorem_one_measurable`). Alphabet compression for arbitrary measuring
-machines and the non-measurable case remain unfinished. See
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the module map and status.
+Savitch's Lemmas 1–3, the concrete multitape simulator (`savitchSimulator`),
+alphabet compression (`AlphabetCompression`), iterative deepening (`IterativeDeepening`),
+and Savitch's Theorem (`savitch_theorem_one_full` in `SavitchLemma/MainTheorem.lean`)
+are all formalized with no `sorry`s. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+for the module map.
 
 ## Project layout
 
-- `SavitchLemma.lean` is the public umbrella for the abstract proofs.
-- `SavitchLemma/` contains the abstract algorithm, reachability, and machine model.
-- `SavitchLemma/Tape/`, `SavitchLemma/RegisterTape/`, and
-  `SavitchLemma/Simulator/` contain the concrete backend in smaller modules.
-- The original `TapePrimitives`, `RegisterTapeOps`, and `SavitchSimulator` module
-  paths remain as compatibility facades.
+- `SavitchLemma.lean` is the public umbrella exporting the abstract proofs and `MainTheorem`.
+- `SavitchLemma/Abstract/` contains the abstract register machine, reachability, and Lemmas 1–3.
+- `SavitchLemma/Model/` contains the multitape machine model, TM combinators, IDs, and bit encoding.
+- `SavitchLemma/Tape/` and `SavitchLemma/RegisterTape/` contain the concrete tape and register-tape operations.
+- `SavitchLemma/Simulator/` (with `Step/` and `Valid/` subpackages) contains the concrete D0–D3 simulator and `MainBridge`.
+- `SavitchLemma/SpaceBounds/` contains `RulerWriter`, `AlphabetCompression`, and `IterativeDeepening`.
+- `SavitchLemma/MainTheorem.lean` proves the main theorems (`savitch_theorem_one`, `savitch_theorem_one_measurable`, `savitch_theorem_one_of_measurable`, `savitch_theorem_one_full`).
+- `TapePrimitives`, `RegisterTapeOps`, and `SavitchSimulator` remain as compatibility facades.
 
 ## Build
 

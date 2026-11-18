@@ -1,8 +1,8 @@
 module
 
 public import Mathlib.Data.Nat.Log
-public import SavitchLemma.AcceptingZD
-public import SavitchLemma.MachineModel
+public import SavitchLemma.Abstract.AcceptingZD
+public import SavitchLemma.Model.MachineModel
 
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring

@@ -2,10 +2,10 @@ module
 
 public import Mathlib.Data.Fintype.EquivFin
 public import Mathlib.Data.Nat.Log
-public import SavitchLemma.BoundedReachability
-public import SavitchLemma.LemmasTwoThree
-public import SavitchLemma.MachineModel
-public import SavitchLemma.SavitchAlgorithm
+public import SavitchLemma.Abstract.BoundedReachability
+public import SavitchLemma.Abstract.LemmasTwoThree
+public import SavitchLemma.Model.MachineModel
+public import SavitchLemma.Abstract.SavitchAlgorithm
 
 import Mathlib.Tactic.Positivity
 

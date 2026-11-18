@@ -3,7 +3,7 @@ module
 public import Mathlib.Logic.Relation
 public import Mathlib.Combinatorics.Quiver.Path.Vertices
 public import Mathlib.Data.List.Nodup
-public import SavitchLemma.SavitchAlgorithm
+public import SavitchLemma.Abstract.SavitchAlgorithm
 
 import Mathlib.Data.Fintype.Card
 import Mathlib.Data.Nat.Find

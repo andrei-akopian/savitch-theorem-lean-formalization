@@ -1,19 +1,24 @@
 # Project architecture
 
-This project separates the abstract proof of Savitch's algorithm from its
-concrete multitape implementation. The public root module, `SavitchLemma.lean`,
-exports the abstract layer. The concrete backend is kept outside that umbrella
-so its unfinished simulator proofs do not block the abstract API.
+This project formalizes Savitch's Theorem (`NSPACE(L) ⊆ DSPACE(L^2)` for
+`1 ≤ L n` and `n ≤ 2 ^ L n`) by separating the abstract register-machine proof
+from its concrete multitape Turing machine implementation.
 
 ## Module map
 
 ```text
 SavitchLemma.lean
 SavitchLemma/
-├── SavitchAlgorithm.lean, Selection.lean, ConfigUpdates.lean
-├── Reachability.lean, StepBehavior.lean, Termination.lean
-├── LemmaOne.lean, BoundedReachability.lean, LemmasTwoThree.lean
-├── MachineModel.lean, InstantaneousDesc.lean, SpaceAnalysis.lean
+├── MainTheorem.lean                    # Theorem 1 (measurable and general cases)
+├── Abstract/
+│   ├── SavitchAlgorithm.lean, Selection.lean, ConfigUpdates.lean
+│   ├── Reachability.lean, StepBehavior.lean, Termination.lean
+│   ├── LemmaOne.lean, BoundedReachability.lean
+│   └── LemmaTwoCounterexample.lean, LemmasTwoThree.lean, AcceptingZD.lean
+├── Model/
+│   ├── MachineModel.lean, TMCombinators.lean
+│   ├── InstantaneousDesc.lean, SpaceAnalysis.lean
+│   └── ConcreteEncoding.lean, SimCombinators.lean
 ├── TapePrimitives.lean                 # compatibility facade
 ├── Tape/
 │   ├── Alphabet.lean                   # SimSym and TapeMatches
@@ -26,68 +31,50 @@ SavitchLemma/
 │   ├── Layout.lean                     # tape roles and register encoding
 │   ├── Copy.lean, Reset.lean
 │   ├── FindUntagged.lean, Advance.lean, Tag.lean
-│   ├── Increment.lean, Initialization.lean
+│   └── Increment.lean, Initialization.lean
 ├── SavitchSimulator.lean               # compatibility facade
-└── Simulator/
-    ├── Core.lean                       # shared actions and bit trackers
-    ├── InitPrimitives.lean, InitRegisters.lean, Initialize.lean
-    ├── Loops.lean
-    └── StepChecker.lean
+├── Simulator/
+│   ├── Core.lean, Loops.lean           # shared actions, bit trackers, loop combinators
+│   ├── InitPrimitives.lean, InitRegisters.lean, Initialize.lean
+│   ├── ReachableLoop.lean, StepDriver.lean, SavitchDriver.lean
+│   ├── MainBridge.lean                 # compiles savitchSimulator to MultitapeDTM
+│   ├── Step/
+│   │   ├── StepChecker.lean
+│   │   ├── StepScanCells.lean, StepScanner.lean
+│   │   └── AcceptChecker.lean
+│   └── Valid/
+│       ├── ConfigValidity.lean, CheckValidB.lean
+│       ├── ValidConfigB.lean, ConfigCheckB.lean
+│       └── CheckValidBTop.lean, CheckValidAndStep.lean
+└── SpaceBounds/
+    ├── RulerWriter.lean                # ruler writer over SimSym
+    ├── AlphabetCompressionDef.lean     # block encoding and rwCompGen
+    ├── AlphabetCompression.lean        # simulation and rwg_prefix
+    ├── IterativeDeepeningPrimitives.lean
+    └── IterativeDeepening.lean         # non-measurable Theorem 1
 ```
 
-The completed abstract proofs remain in small top-level modules. The concrete
-implementation is divided by dependency and responsibility, keeping each Lean
-file focused enough to inspect and iterate on independently.
-
-The tape and register-tape chains compile through their compatibility facades.
-The simulator chain now compiles through `Simulator.StepChecker`, including
-`copyHeadBitsRel_reachesExit`, `readHeadBlock_reachesExit`, and the
-input-head-move postprocessor. `Simulator.Core` also defines bounded-tape
-transition summaries and proves the finite summary checker equivalent to
-`MultitapeNTM.step`. These are verified primitives/specifications, not a
-complete fixed-capacity Savitch driver: the serialized control/symbol scanner,
-end-to-end concrete `checkStep`, and top-level D0–D3 component remain future
-work. The default public target does not import this backend.
-
-## Concrete backend dependency flow
+## Dependency flow
 
 ```text
-MachineModel ──► TMCombinators ──► Tape.Alphabet
-       │                               │
-       └──► ConcreteEncoding ──────────┘
-                                       ▼
-                                 Tape.Actions
-                                       ▼
-                             Tape.BasicOperations
-                                       ▼
-                          Tape.BinaryArithmetic
-                                       ▼
-                              Tape.Comparison
-                                       ▼
-                                RegisterTape.*
-                                       ▼
-                                 Simulator.*
+Model.MachineModel ──► Model.TMCombinators ──► Tape.*
+       │                                         │
+       └──► Model.ConcreteEncoding ──────────────▼
+                                           RegisterTape.*
+                                                 │
+                                                 ▼
+                                            Simulator.*
+                                           (Step/*, Valid/*)
+                                                 │
+                                                 ▼
+                                           SpaceBounds.*
+                                                 │
+                                                 ▼
+                                            MainTheorem
 ```
-
-The abstract acceptance and register-machine modules also feed into
-`ConcreteEncoding`, `RegisterTape.Layout`, and `Simulator.Core`. Within each
-folder, the imports follow the implementation order: foundational data and
-invariants first, followed by operations and their higher-level compositions.
-
-## Import conventions
-
-- Import the narrowest module that provides the definitions needed by new work.
-- Keep the old flat entry points (`SavitchLemma.TapePrimitives`,
-  `SavitchLemma.RegisterTapeOps`, and `SavitchLemma.SavitchSimulator`) as
-  facades so existing imports remain valid.
-- Add new operations to the focused module that owns their invariant; add a new
-  file when a module grows beyond one coherent proof/implementation unit.
-- Avoid importing the concrete backend from `SavitchLemma.lean` unless the
-  public abstract API is intentionally being expanded.
 
 ## Validation
 
-Use the pinned Lean toolchain and run `lake build` from the repository root to
-check the default abstract target. Check the concrete layers explicitly with
-`lake build SavitchLemma.SavitchSimulator`. Compile an individual module with
+Run `lake build` from the repository root to build the full library
+(including `MainTheorem`). Compile an individual module with
 `lake env lean path/to/Module.lean` when iterating on one file.

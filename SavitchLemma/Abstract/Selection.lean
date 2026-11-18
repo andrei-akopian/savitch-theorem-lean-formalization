@@ -1,7 +1,7 @@
 module
 
 public import Batteries.Data.Fin.Lemmas
-public import SavitchLemma.SavitchAlgorithm
+public import SavitchLemma.Abstract.SavitchAlgorithm
 
 @[expose] public section
 

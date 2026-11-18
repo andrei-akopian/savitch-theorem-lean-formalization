@@ -1,7 +1,7 @@
 module
 
-public import SavitchLemma.AcceptingZD
-public import SavitchLemma.ConcreteEncoding
+public import SavitchLemma.Abstract.AcceptingZD
+public import SavitchLemma.Model.ConcreteEncoding
 public import SavitchLemma.RegisterTapeOps
 
 @[expose] public section

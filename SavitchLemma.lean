@@ -1,18 +1,18 @@
 module
 
-public import SavitchLemma.SavitchAlgorithm
-public import SavitchLemma.Selection
-public import SavitchLemma.ConfigUpdates
-public import SavitchLemma.Reachability
-public import SavitchLemma.StepBehavior
-public import SavitchLemma.Termination
-public import SavitchLemma.LemmaOne
-public import SavitchLemma.BoundedReachability
-public import SavitchLemma.LemmaTwoCounterexample
-public import SavitchLemma.LemmasTwoThree
-public import SavitchLemma.MachineModel
-public import SavitchLemma.InstantaneousDesc
-public import SavitchLemma.SpaceAnalysis
+public import SavitchLemma.Abstract.SavitchAlgorithm
+public import SavitchLemma.Abstract.Selection
+public import SavitchLemma.Abstract.ConfigUpdates
+public import SavitchLemma.Abstract.Reachability
+public import SavitchLemma.Abstract.StepBehavior
+public import SavitchLemma.Abstract.Termination
+public import SavitchLemma.Abstract.LemmaOne
+public import SavitchLemma.Abstract.BoundedReachability
+public import SavitchLemma.Abstract.LemmaTwoCounterexample
+public import SavitchLemma.Abstract.LemmasTwoThree
+public import SavitchLemma.Model.MachineModel
+public import SavitchLemma.Model.InstantaneousDesc
+public import SavitchLemma.Model.SpaceAnalysis
 public import SavitchLemma.MainTheorem
 
 /-!

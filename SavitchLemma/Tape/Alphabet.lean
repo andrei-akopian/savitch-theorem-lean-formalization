@@ -1,8 +1,8 @@
 module
 
 public import Mathlib.Data.Fintype.Basic
-public import SavitchLemma.ConcreteEncoding
-public import SavitchLemma.TMCombinators
+public import SavitchLemma.Model.ConcreteEncoding
+public import SavitchLemma.Model.TMCombinators
 
 @[expose] public section
 

@@ -1,7 +1,7 @@
 module
 
 public import Mathlib.Data.Fintype.Sum
-public import SavitchLemma.MachineModel
+public import SavitchLemma.Model.MachineModel
 
 @[expose] public section
 

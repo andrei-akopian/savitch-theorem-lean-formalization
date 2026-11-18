@@ -1,8 +1,8 @@
 module
 
-public import SavitchLemma.ConfigUpdates
-public import SavitchLemma.Reachability
-public import SavitchLemma.Selection
+public import SavitchLemma.Abstract.ConfigUpdates
+public import SavitchLemma.Abstract.Reachability
+public import SavitchLemma.Abstract.Selection
 
 @[expose] public section
 

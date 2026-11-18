@@ -1,6 +1,6 @@
 module
 
-public import SavitchLemma.Simulator.CheckValidBTop
+public import SavitchLemma.Simulator.Valid.CheckValidBTop
 
 @[expose] public section
 

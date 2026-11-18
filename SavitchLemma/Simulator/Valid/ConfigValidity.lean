@@ -1,6 +1,6 @@
 module
 
-public import SavitchLemma.Simulator.AcceptChecker
+public import SavitchLemma.Simulator.Step.AcceptChecker
 
 @[expose] public section
 

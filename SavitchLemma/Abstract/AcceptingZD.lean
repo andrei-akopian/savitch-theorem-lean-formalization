@@ -1,6 +1,6 @@
 module
 
-public import SavitchLemma.LemmasTwoThree
+public import SavitchLemma.Abstract.LemmasTwoThree
 
 @[expose] public section
 

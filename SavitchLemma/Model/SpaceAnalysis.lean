@@ -1,7 +1,7 @@
 module
 
 public import Mathlib.Data.Nat.Log
-public import SavitchLemma.InstantaneousDesc
+public import SavitchLemma.Model.InstantaneousDesc
 
 import Mathlib.Tactic.Positivity
 import Mathlib.Tactic.Linarith
