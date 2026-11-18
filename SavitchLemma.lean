@@ -13,6 +13,7 @@ public import SavitchLemma.LemmasTwoThree
 public import SavitchLemma.MachineModel
 public import SavitchLemma.InstantaneousDesc
 public import SavitchLemma.SpaceAnalysis
+public import SavitchLemma.MainTheorem
 
 /-!
 # Savitch's theorem

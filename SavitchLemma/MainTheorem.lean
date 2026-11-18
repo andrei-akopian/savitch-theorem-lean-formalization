@@ -3,6 +3,8 @@ module
 public import SavitchLemma.Simulator.MainBridge
 public import SavitchLemma.SpaceAnalysis
 public import SavitchLemma.Simulator.RulerWriter
+public import SavitchLemma.Simulator.AlphabetCompression
+public import SavitchLemma.Simulator.IterativeDeepening
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 
@@ -145,5 +147,38 @@ theorem savitch_theorem_one_measurable {Q Γ InputAlphabet : Type} {k : ℕ}
       (L' : ℕ → ℕ) (C : ℕ),
       D.AcceptsLanguageWithinSpace A L' ∧ ∀ n, L' n ≤ C * (L n + 1) ^ 2 :=
   savitch_theorem_one M A L (rulerWriter_of_measurableSim hMeas fun n => (hL n).1) hL hM
+
+theorem rulerWriter_of_measurable {InputAlphabet : Type} [Fintype InputAlphabet]
+    {L : ℕ → ℕ} (hMeas : IsMeasurable InputAlphabet L) (hL : ∀ n, 1 ≤ L n) :
+    RulerWriter InputAlphabet L := by
+  obtain ⟨QD, Γ, _, _, D, hHalt⟩ := hMeas
+  refine ⟨RWGState QD Γ, inferInstance, rwCompGen D, Fintype.card Γ + 2, fun n input => ?_⟩
+  exact rwg_prefix D input (L n) (hL n) ((Fintype.card Γ + 2) * (L n + 1)) le_rfl (hHalt n input)
+
+/-- **Theorem 1** for measurable space bounds `L` (over any finite tape alphabet). -/
+theorem savitch_theorem_one_of_measurable {Q Γ InputAlphabet : Type} {k : ℕ}
+    [Fintype Q] [Fintype Γ] [Fintype InputAlphabet]
+    (M : MultitapeNTM Q InputAlphabet Γ k)
+    (A : ∀ n : ℕ, (Fin n → InputAlphabet) → Prop) (L : ℕ → ℕ)
+    (hMeas : IsMeasurable InputAlphabet L)
+    (hL : ∀ n, 1 ≤ L n ∧ n ≤ 2 ^ L n)
+    (hM : M.AcceptsLanguageWithinSpace A L) :
+    ∃ (QD : Type) (_ : Fintype QD) (D : MultitapeDTM QD InputAlphabet SimSym 5)
+      (L' : ℕ → ℕ) (C : ℕ),
+      D.AcceptsLanguageWithinSpace A L' ∧ ∀ n, L' n ≤ C * (L n + 1) ^ 2 :=
+  savitch_theorem_one M A L (rulerWriter_of_measurable hMeas fun n => (hL n).1) hL hM
+
+/-- **Theorem 1** (general, non-measurable space bounds `L` via iterative deepening). -/
+theorem savitch_theorem_one_full {Q Γ InputAlphabet : Type} {k : ℕ}
+    [Fintype Q] [Fintype Γ] [Fintype InputAlphabet]
+    (M : MultitapeNTM Q InputAlphabet Γ k)
+    (A : ∀ n : ℕ, (Fin n → InputAlphabet) → Prop) (L : ℕ → ℕ)
+    (hL : ∀ n, 1 ≤ L n ∧ n ≤ 2 ^ L n)
+    (hM : M.AcceptsLanguageWithinSpace A L) :
+    ∃ (QD : Type) (_ : Fintype QD) (D : MultitapeDTM QD InputAlphabet SimSym 5)
+      (L' : ℕ → ℕ) (C : ℕ),
+      D.AcceptsLanguageWithinSpace A L' ∧ ∀ n, L' n ≤ C * (L n + 1) ^ 2 := by
+  obtain ⟨C, hAcc, hBd⟩ := savitchDTM_nonmeasurable_correct M A L hL hM
+  exact ⟨_, inferInstance, savitchDTM_nonmeasurable M, _, C, hAcc, hBd⟩
 
 end SavitchLemma

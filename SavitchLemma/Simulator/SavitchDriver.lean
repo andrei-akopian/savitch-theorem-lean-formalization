@@ -88,6 +88,105 @@ private theorem loop_lift_unit {Q InputAlphabet Γ : Type*} {k n : ℕ}
     · simpa [loopWithState, TMAction.mapState, hState, hScanned] using hTps
 
 /-- Running the D1–D3 loop from a valid `ZDConfig` terminates with `true` iff
+`zdOutcomeStep` reaches `.accept`, and on `false` leaves `tRuler` intact and
+`tRegs`/`tArgA`/`tArgB`/`tScratch` clean (with no `.blank` inside `tRegs`). -/
+theorem savitchLoop_reachesExit_clean {Q InputAlphabet Γ : Type*} {k n : ℕ}
+    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
+    (M : MultitapeNTM Q InputAlphabet Γ k)
+    (input : Fin n → InputAlphabet) (bound : Fin 5 → ℕ)
+    (S : ℕ) (hS : 1 ≤ S) (hInput : n ≤ 2 ^ S)
+    (r : ℕ) (hr : 1 ≤ r)
+    (hBoundR : S + 2 ≤ bound tRuler)
+    (hBoundRegs : 1 + r * (configBitWidth Q Γ k S + 2) +
+      (configBitWidth Q Γ k S + 3) ≤ bound tRegs)
+    (hBoundA : configBitWidth Q Γ k S + 2 ≤ bound tArgA)
+    (hBoundB : configBitWidth Q Γ k S + 2 ≤ bound tArgB)
+    (hBoundS : S + 4 ≤ bound tScratch)
+    (cfg : ZDConfig r (2 ^ configBitWidth Q Γ k S - 1))
+    (hValid : ValidZDTags Q Γ n S cfg)
+    (initTapes : Fin 5 → OneSidedTape SimSym) (inHead : Fin (n + 2))
+    (hMatchR : TapeMatches (initTapes tRuler)
+      (.leftMark :: List.replicate S (.bit true) ++ [.endMark]) 1)
+    (hMatchRegs : TapeMatches (initTapes tRegs)
+      (zdRegsContents (configBitWidth Q Γ k S) cfg) 1)
+    (hMatchA : TapeMatches (initTapes tArgA) [.leftMark] 1)
+    (hMatchB : TapeMatches (initTapes tArgB) [.leftMark] 1)
+    (hMatchS : TapeMatches (initTapes tScratch) [.leftMark] 1) :
+    let W := configBitWidth Q Γ k S
+    let hN : 1 < 2 ^ W - 1 := one_lt_two_pow_sub_one' (two_le_configBitWidth' Q Γ k S)
+    ∃ (res : Bool) (finalTapes : Fin 5 → OneSidedTape SimSym) (finalInHead : Fin (n + 2)),
+      (loopWithState () fun _ => zdConcreteStep M).ReachesExit
+        input bound initTapes inHead res finalTapes finalInHead ∧
+      Relation.ReflTransGen (zdOutcomeStep (bitProblem M input S) hN (bitIsAccepting M n S))
+        (.running cfg) (if res then .accept else .reject) ∧
+      (res = false →
+        TapeMatches (finalTapes tRuler)
+          (.leftMark :: List.replicate S (.bit true) ++ [.endMark]) 1 ∧
+        (∃ prefixSyms : List SimSym,
+          (∀ s ∈ prefixSyms, s ≠ .endMark) ∧
+          prefixSyms.length + 2 ≤ 1 + r * (W + 2) + (W + 3) ∧
+          TapeMatches (finalTapes tRegs) (.leftMark :: prefixSyms ++ [.endMark]) 1) ∧
+        TapeMatches (finalTapes tArgA) [.leftMark] 1 ∧
+        TapeMatches (finalTapes tArgB) [.leftMark] 1 ∧
+        TapeMatches (finalTapes tScratch) [.leftMark] 1) := by
+  classical
+  let W := configBitWidth Q Γ k S
+  let hN : 1 < 2 ^ W - 1 := one_lt_two_pow_sub_one' (two_le_configBitWidth' Q Γ k S)
+  let body := fun (_ : Unit) => zdConcreteStep M
+  have hMain : ∀ cfg : ZDConfig r (2 ^ W - 1),
+      ValidZDTags Q Γ n S cfg →
+      ∀ tapes inHead,
+        TapeMatches (tapes tRuler) (.leftMark :: List.replicate S (.bit true) ++ [.endMark]) 1 →
+        TapeMatches (tapes tRegs) (zdRegsContents W cfg) 1 →
+        TapeMatches (tapes tArgA) [.leftMark] 1 →
+        TapeMatches (tapes tArgB) [.leftMark] 1 →
+        TapeMatches (tapes tScratch) [.leftMark] 1 →
+        ∃ (res : Bool) (finalTapes : Fin 5 → OneSidedTape SimSym) (finalInHead : Fin (n + 2)),
+          (loopWithState () body).ReachesExit
+            input bound tapes inHead res finalTapes finalInHead ∧
+          Relation.ReflTransGen (zdOutcomeStep (bitProblem M input S) hN (bitIsAccepting M n S))
+            (.running cfg) (if res then .accept else .reject) ∧
+          (res = false →
+            TapeMatches (finalTapes tRuler)
+              (.leftMark :: List.replicate S (.bit true) ++ [.endMark]) 1 ∧
+            (∃ prefixSyms : List SimSym,
+              (∀ s ∈ prefixSyms, s ≠ .endMark) ∧
+              prefixSyms.length + 2 ≤ 1 + r * (W + 2) + (W + 3) ∧
+              TapeMatches (finalTapes tRegs) (.leftMark :: prefixSyms ++ [.endMark]) 1) ∧
+            TapeMatches (finalTapes tArgA) [.leftMark] 1 ∧
+            TapeMatches (finalTapes tArgB) [.leftMark] 1 ∧
+            TapeMatches (finalTapes tScratch) [.leftMark] 1) := by
+    intro cfg0
+    induction cfg0 using (InvImage.wf zdMeasure (zdMeasure_wellFounded r)).induction with
+    | h cur ih =>
+      intro hValidCur tapes inHead hMR hMRegs hMA hMB hMS
+      obtain ⟨stepRes, midTapes, midHead, hStep, hPost⟩ :=
+        zdConcreteStep_reachesExit M input bound S hS hInput r hr cur hValidCur
+          hBoundR hBoundRegs hBoundA hBoundB hBoundS tapes inHead hMR hMRegs hMA hMB hMS
+      have hLifted := loop_lift_unit body input bound _ _ hStep
+      cases hOut : zdAcceptingStep (bitProblem M input S) hN (bitIsAccepting M n S) cur with
+      | accept =>
+        rw [hOut] at hPost
+        subst hPost
+        exact ⟨true, midTapes, midHead, hLifted, Relation.ReflTransGen.single hOut, fun h => by cases h⟩
+      | reject =>
+        rw [hOut] at hPost
+        rcases hPost with ⟨rfl, hClean⟩
+        exact ⟨false, midTapes, midHead, hLifted, Relation.ReflTransGen.single hOut, fun _ => hClean⟩
+      | running next =>
+        rw [hOut] at hPost
+        rcases hPost with ⟨rfl, hValidNext, hR', hRegs', hA', hB', hS'⟩
+        have hZd : zdStep (bitProblem M input S) hN cur = some next :=
+          zdAcceptingStep_running_eq_zdStep (bitProblem M input S) hN (bitIsAccepting M n S) hOut
+        have hDec : zdMeasure next < zdMeasure cur :=
+          zdStep_decreases_measure (bitProblem M input S) hN cur next hZd
+        obtain ⟨res, finalTapes, finalInHead, hRest, hOutcomeRest, hCleanRest⟩ :=
+          ih next hDec hValidNext midTapes midHead hR' hRegs' hA' hB' hS'
+        exact ⟨res, finalTapes, finalInHead, hLifted.trans hRest,
+          Relation.ReflTransGen.head hOut hOutcomeRest, hCleanRest⟩
+  exact hMain cfg hValid initTapes inHead hMatchR hMatchRegs hMatchA hMatchB hMatchS
+
+/-- Running the D1–D3 loop from a valid `ZDConfig` terminates with `true` iff
 `zdOutcomeStep` reaches `.accept`. -/
 theorem savitchLoop_reachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
@@ -118,52 +217,85 @@ theorem savitchLoop_reachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ}
         input bound initTapes inHead res finalTapes finalInHead ∧
       Relation.ReflTransGen (zdOutcomeStep (bitProblem M input S) hN (bitIsAccepting M n S))
         (.running cfg) (if res then .accept else .reject) := by
-  classical
+  obtain ⟨res, ft, fih, h1, h2, _⟩ := savitchLoop_reachesExit_clean M input bound S hS hInput r hr
+    hBoundR hBoundRegs hBoundA hBoundB hBoundS cfg hValid initTapes inHead
+    hMatchR hMatchRegs hMatchA hMatchB hMatchS
+  exact ⟨res, ft, fih, h1, h2⟩
+
+/-- Main simulation theorem with clean-tape postcondition on `res = false`. -/
+theorem savitchSimulator_reachesExit_clean {Q InputAlphabet Γ : Type*} {k n : ℕ}
+    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
+    (M : MultitapeNTM Q InputAlphabet Γ k)
+    (input : Fin n → InputAlphabet) (bound : Fin 5 → ℕ)
+    (S : ℕ) (hS : 1 ≤ S) (hInput : n ≤ 2 ^ S)
+    (hBoundR : S + 2 ≤ bound tRuler)
+    (hBoundRegs : 1 + (configBitWidth Q Γ k S + 1) * (configBitWidth Q Γ k S + 2) +
+      (configBitWidth Q Γ k S + 3) ≤ bound tRegs)
+    (hBoundA : configBitWidth Q Γ k S + 2 ≤ bound tArgA)
+    (hBoundB : configBitWidth Q Γ k S + 2 ≤ bound tArgB)
+    (hBoundS : S + 4 ≤ bound tScratch)
+    (initTapes : Fin 5 → OneSidedTape SimSym) (inHead : Fin (n + 2))
+    (hMatchR : TapeMatches (initTapes tRuler)
+      (.leftMark :: List.replicate S (.bit true) ++ [.endMark]) 1)
+    (hMatchRegs : TapeMatches (initTapes tRegs) [.leftMark] 1)
+    (hMatchA : TapeMatches (initTapes tArgA) [.leftMark] 1)
+    (hMatchB : TapeMatches (initTapes tArgB) [.leftMark] 1)
+    (hMatchS : TapeMatches (initTapes tScratch) [.leftMark] 1) :
+    ∃ (res : Bool) (finalTapes : Fin 5 → OneSidedTape SimSym) (finalInHead : Fin (n + 2)),
+      (savitchSimulator M).ReachesExit input bound initTapes inHead res finalTapes finalInHead ∧
+      (res = true ↔ M.AcceptsWithinCapacity input S (by omega)) ∧
+      (res = false →
+        TapeMatches (finalTapes tRuler)
+          (.leftMark :: List.replicate S (.bit true) ++ [.endMark]) 1 ∧
+        (∃ prefixSyms : List SimSym,
+          (∀ s ∈ prefixSyms, s ≠ .endMark) ∧
+          prefixSyms.length + 2 ≤ 1 + (configBitWidth Q Γ k S + 1) * (configBitWidth Q Γ k S + 2) +
+            (configBitWidth Q Γ k S + 3) ∧
+          TapeMatches (finalTapes tRegs) (.leftMark :: prefixSyms ++ [.endMark]) 1) ∧
+        TapeMatches (finalTapes tArgA) [.leftMark] 1 ∧
+        TapeMatches (finalTapes tArgB) [.leftMark] 1 ∧
+        TapeMatches (finalTapes tScratch) [.leftMark] 1) := by
   let W := configBitWidth Q Γ k S
-  let hN : 1 < 2 ^ W - 1 := one_lt_two_pow_sub_one' (two_le_configBitWidth' Q Γ k S)
-  let body := fun (_ : Unit) => zdConcreteStep M
-  have hMain : ∀ cfg : ZDConfig r (2 ^ W - 1),
-      ValidZDTags Q Γ n S cfg →
-      ∀ tapes inHead,
-        TapeMatches (tapes tRuler) (.leftMark :: List.replicate S (.bit true) ++ [.endMark]) 1 →
-        TapeMatches (tapes tRegs) (zdRegsContents W cfg) 1 →
-        TapeMatches (tapes tArgA) [.leftMark] 1 →
-        TapeMatches (tapes tArgB) [.leftMark] 1 →
-        TapeMatches (tapes tScratch) [.leftMark] 1 →
-        ∃ (res : Bool) (finalTapes : Fin 5 → OneSidedTape SimSym) (finalInHead : Fin (n + 2)),
-          (loopWithState () body).ReachesExit
-            input bound tapes inHead res finalTapes finalInHead ∧
-          Relation.ReflTransGen (zdOutcomeStep (bitProblem M input S) hN (bitIsAccepting M n S))
-            (.running cfg) (if res then .accept else .reject) := by
-    intro cfg0
-    induction cfg0 using (InvImage.wf zdMeasure (zdMeasure_wellFounded r)).induction with
-    | h cur ih =>
-      intro hValidCur tapes inHead hMR hMRegs hMA hMB hMS
-      obtain ⟨stepRes, midTapes, midHead, hStep, hPost⟩ :=
-        zdConcreteStep_reachesExit M input bound S hS hInput r hr cur hValidCur
-          hBoundR hBoundRegs hBoundA hBoundB hBoundS tapes inHead hMR hMRegs hMA hMB hMS
-      have hLifted := loop_lift_unit body input bound _ _ hStep
-      cases hOut : zdAcceptingStep (bitProblem M input S) hN (bitIsAccepting M n S) cur with
-      | accept =>
-        rw [hOut] at hPost
-        subst hPost
-        exact ⟨true, midTapes, midHead, hLifted, Relation.ReflTransGen.single hOut⟩
-      | reject =>
-        rw [hOut] at hPost
-        subst hPost
-        exact ⟨false, midTapes, midHead, hLifted, Relation.ReflTransGen.single hOut⟩
-      | running next =>
-        rw [hOut] at hPost
-        rcases hPost with ⟨rfl, hValidNext, hR', hRegs', hA', hB', hS'⟩
-        have hZd : zdStep (bitProblem M input S) hN cur = some next :=
-          zdAcceptingStep_running_eq_zdStep (bitProblem M input S) hN (bitIsAccepting M n S) hOut
-        have hDec : zdMeasure next < zdMeasure cur :=
-          zdStep_decreases_measure (bitProblem M input S) hN cur next hZd
-        obtain ⟨res, finalTapes, finalInHead, hRest, hOutcomeRest⟩ :=
-          ih next hDec hValidNext midTapes midHead hR' hRegs' hA' hB' hS'
-        exact ⟨res, finalTapes, finalInHead, hLifted.trans hRest,
-          Relation.ReflTransGen.head hOut hOutcomeRest⟩
-  exact hMain cfg hValid initTapes inHead hMatchR hMatchRegs hMatchA hMatchB hMatchS
+  have hBoundSHead : (initTapes tScratch).head < bound tScratch := by
+    rw [hMatchS.head_eq]; omega
+  obtain ⟨ftR, ftReg, ftA, ftB, hInit, hMR, hMReg, hMA, hMB⟩ :=
+    initSavitchTapes_reachesExit M input bound S hS
+      hBoundR hBoundRegs hBoundA hBoundB initTapes inHead hBoundSHead
+      hMatchR hMatchRegs hMatchA hMatchB
+  let tInit := fun j =>
+    if j = tRuler then ftR else if j = tRegs then ftReg
+    else if j = tArgA then ftA else if j = tArgB then ftB else initTapes j
+  let cfg₀ := zdInitial (W + 1) (2 ^ W - 1) (configBitWidth_gt_one_pow Q Γ k S)
+    (bitEncodeConfig Q Γ (M.initialConfig (n := n) S (by omega)))
+  have hValid0 : ValidZDTags Q Γ n S cfg₀ := by
+    refine ⟨zdInitial_source_tag _ _ _ _, ?_⟩
+    intro i hi
+    have hiLast : i.val = W + 1 := by
+      simpa [cfg₀, zdInitial] using hi
+    have hFinEq : i = Fin.last (W + 1) := by ext; exact hiLast
+    rw [hFinEq]
+    exact ⟨M.initialConfig (n := n) S (by omega), zdInitial_source _ _ _ _⟩
+  obtain ⟨res, finalTapes, finalInHead, hLoop, hOutcome, hClean⟩ :=
+    savitchLoop_reachesExit_clean M input bound S hS hInput (W + 1) (by omega)
+      hBoundR hBoundRegs hBoundA hBoundB hBoundS cfg₀ hValid0 tInit inHead
+      (by simpa [tInit, tRuler] using hMR)
+      (by simpa [tInit, tRuler, tRegs] using hMReg)
+      (by simpa [tInit, tRuler, tRegs, tArgA] using hMA)
+      (by simpa [tInit, tRuler, tRegs, tArgA, tArgB] using hMB)
+      (by simpa [tInit, tRuler, tRegs, tArgA, tArgB, tScratch] using hMatchS)
+  refine ⟨res, finalTapes, finalInHead,
+    TMComponent.seq_reachesExit _ _ input bound hInit hLoop, ?_, hClean⟩
+  constructor
+  · intro hTrue
+    rw [hTrue] at hOutcome
+    exact bitProblem_accepting_sound M input S hS hInput (W + 1) hOutcome
+  · intro hAcc
+    have hAccOutcome := bitProblem_accepting_complete M input S hS hInput hAcc
+    have hDet := zdOutcomeStep_deterministic_terminal
+      (bitProblem M input S) (configBitWidth_gt_one_pow Q Γ k S) (bitIsAccepting M n S)
+      hOutcome hAccOutcome
+      (by cases res <;> simp) (Or.inl rfl)
+    cases res <;> simp at hDet ⊢
 
 /-- Main simulation theorem: from cleanly initialized tapes, `savitchSimulator M`
 halts and returns `true` iff `M` accepts `input` within tape capacity `S`. -/
@@ -188,46 +320,9 @@ theorem savitchSimulator_reachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ}
     ∃ (res : Bool) (finalTapes : Fin 5 → OneSidedTape SimSym) (finalInHead : Fin (n + 2)),
       (savitchSimulator M).ReachesExit input bound initTapes inHead res finalTapes finalInHead ∧
       (res = true ↔ M.AcceptsWithinCapacity input S (by omega)) := by
-  let W := configBitWidth Q Γ k S
-  have hBoundSHead : (initTapes tScratch).head < bound tScratch := by
-    rw [hMatchS.head_eq]; omega
-  obtain ⟨ftR, ftReg, ftA, ftB, hInit, hMR, hMReg, hMA, hMB⟩ :=
-    initSavitchTapes_reachesExit M input bound S hS
-      hBoundR hBoundRegs hBoundA hBoundB initTapes inHead hBoundSHead
-      hMatchR hMatchRegs hMatchA hMatchB
-  let tInit := fun j =>
-    if j = tRuler then ftR else if j = tRegs then ftReg
-    else if j = tArgA then ftA else if j = tArgB then ftB else initTapes j
-  let cfg₀ := zdInitial (W + 1) (2 ^ W - 1) (configBitWidth_gt_one_pow Q Γ k S)
-    (bitEncodeConfig Q Γ (M.initialConfig (n := n) S (by omega)))
-  have hValid0 : ValidZDTags Q Γ n S cfg₀ := by
-    refine ⟨zdInitial_source_tag _ _ _ _, ?_⟩
-    intro i hi
-    have hiLast : i.val = W + 1 := by
-      simpa [cfg₀, zdInitial] using hi
-    have hFinEq : i = Fin.last (W + 1) := by ext; exact hiLast
-    rw [hFinEq]
-    exact ⟨M.initialConfig (n := n) S (by omega), zdInitial_source _ _ _ _⟩
-  obtain ⟨res, finalTapes, finalInHead, hLoop, hOutcome⟩ :=
-    savitchLoop_reachesExit M input bound S hS hInput (W + 1) (by omega)
-      hBoundR hBoundRegs hBoundA hBoundB hBoundS cfg₀ hValid0 tInit inHead
-      (by simpa [tInit, tRuler] using hMR)
-      (by simpa [tInit, tRuler, tRegs] using hMReg)
-      (by simpa [tInit, tRuler, tRegs, tArgA] using hMA)
-      (by simpa [tInit, tRuler, tRegs, tArgA, tArgB] using hMB)
-      (by simpa [tInit, tRuler, tRegs, tArgA, tArgB, tScratch] using hMatchS)
-  refine ⟨res, finalTapes, finalInHead,
-    TMComponent.seq_reachesExit _ _ input bound hInit hLoop, ?_⟩
-  constructor
-  · intro hTrue
-    rw [hTrue] at hOutcome
-    exact bitProblem_accepting_sound M input S hS hInput (W + 1) hOutcome
-  · intro hAcc
-    have hAccOutcome := bitProblem_accepting_complete M input S hS hInput hAcc
-    have hDet := zdOutcomeStep_deterministic_terminal
-      (bitProblem M input S) (configBitWidth_gt_one_pow Q Γ k S) (bitIsAccepting M n S)
-      hOutcome hAccOutcome
-      (by cases res <;> simp) (Or.inl rfl)
-    cases res <;> simp at hDet ⊢
+  obtain ⟨res, ft, fih, h1, h2, _⟩ := savitchSimulator_reachesExit_clean M input bound S hS hInput
+    hBoundR hBoundRegs hBoundA hBoundB hBoundS initTapes inHead
+    hMatchR hMatchRegs hMatchA hMatchB hMatchS
+  exact ⟨res, ft, fih, h1, h2⟩
 
 end SavitchLemma

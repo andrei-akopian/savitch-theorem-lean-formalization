@@ -146,7 +146,7 @@ theorem rw_pre_step {QD I : Type} [Fintype QD] [Fintype I] (D : MultitapeDTM QD 
   simp [rwComp, mk5, OneSidedTape.updateAndMove, moveOneSidedHead, rwCfg, tapes5,
     rulerTape, scratchTape, fixedTape, MultitapeNTM.oneSidedInitialConfig]
   have hb : D.toNTM.blank = .blank := hBlank
-  split_ifs <;> (congr 1 <;> (try (funext i; by_cases hi : i = 0 <;> simp [hi, hb])))
+  split_ifs <;> first | (congr 1; funext i; by_cases hi : i = 0 <;> simp [hi, hb]) | rfl
 
 theorem updateAndMove_eq {T T' : OneSidedTape SimSym} {w : SimSym} {mv : TapeMove}
     (h : T.updateAndMove w mv = some T') :
@@ -441,7 +441,7 @@ theorem rw_clear {QD I : Type} [Fintype QD] [Fintype I] (D : MultitapeDTM QD I S
       by_cases h0 : i = 0
       · simp [h0]; omega
       · by_cases hi : i = c
-        · simp [hi, h0, hcS, hc0]
+        · simp [hi, hcS, hc0]
         · simp [hi, h0]
     · simp [OneSidedTape.updateAndMove, moveOneSidedHead]
 
@@ -475,7 +475,7 @@ theorem rw_back {QD I : Type} [Fintype QD] [Fintype I] (D : MultitapeDTM QD I Si
       (by simp [rulerCap]; omega) (by simp; omega)
     · exact hStep.trans (ih' (by omega))
     · rw [rw_back_act]; simp [rulerCap]
-      intro h; split_ifs at h <;> simp at h
+      intro h; split_ifs at h
     · simpa [rulerCap] using write_same_move (rulerCap S (c + 1)) (mv := .left) (h' := c)
         (by simp [rulerCap, moveOneSidedHead])
     · simpa using write_same_move (⟨g, c + 1⟩ : OneSidedTape SimSym) (mv := .left) (h' := c)
@@ -516,12 +516,12 @@ theorem rw_sim_path {QD I : Type} [Fintype QD] [Fintype I] (D : MultitapeDTM QD 
     refine ⟨max m' ((b.workTapes 0).head + 1), ?_, le_trans hmm (le_max_left _ _), ?_, hcl,
       max_le hm'S hbS⟩
     · refine hRun.tail ⟨hcs, ?_, ?_⟩
-      · exact tapes5_head_lt _ _ _ _ (by simp [rwCfg, rulerTape]; omega)
-          (by simp [rwCfg, scratchTape]; omega) (by simp [fixedTape]; omega)
+      · exact tapes5_head_lt _ _ _ _ (by simp [rulerTape]; omega)
+          (by simp [scratchTape]; omega) (by simp [fixedTape]; omega)
       · exact tapes5_head_lt _ _ _ _ (by
           have := hc 0
-          simp [rwCfg, rulerTape]; omega)
-          (by have := hc 0; simp [rwCfg, scratchTape]; omega) (by simp [fixedTape]; omega)
+          simp [rulerTape]; omega)
+          (by have := hc 0; simp [scratchTape]; omega) (by simp [fixedTape]; omega)
     · intro hac
       by_cases hab' : a = b
       · subst hab'; exact le_trans (by omega) (le_max_right _ _)
@@ -562,12 +562,12 @@ theorem rulerCap_matches (S : ℕ) :
       rw [e]; simp [h1]
     · by_cases h2 : i = S + 1
       · subst h2
-        simp [List.getElem?_append]
+        simp
       · obtain ⟨j, rfl⟩ : ∃ j, i = j + 1 := ⟨i - 1, by omega⟩
         have e : (SimSym.leftMark :: List.replicate S (SimSym.bit true) ++
             [SimSym.endMark])[j+1]? = none := by
           rw [List.getElem?_eq_none]; simp; omega
-        rw [e]; simp [h1, h2]; omega
+        rw [e]; simp [h1]; omega
 
 theorem fixedTape_matches : TapeMatches fixedTape [.leftMark] 1 := by
   refine ⟨rfl, fun i => ?_⟩
@@ -635,8 +635,8 @@ theorem rw_prefix {QD I : Type} [Fintype QD] [Fintype I] (D : MultitapeDTM QD I 
           fixedTape⟩ := by
     refine Relation.ReflTransGen.single ⟨hMark, ?_, ?_⟩
     · intro t
-      exact tapes5_head_lt _ _ _ _ (by simp [rwCfg, rulerTape]; omega)
-        (by simp [rwCfg, scratchTape]; omega) (by simp [fixedTape]; omega) t
+      exact tapes5_head_lt _ _ _ _ (by simp [rulerTape]; omega)
+        (by simp [scratchTape]; omega) (by simp [fixedTape]; omega) t
     · intro t
       exact tapes5_head_lt _ _ _ _ (by simp [rulerTape]; omega)
         (by simp [scratchTape]; omega) (by simp [fixedTape]; omega) t

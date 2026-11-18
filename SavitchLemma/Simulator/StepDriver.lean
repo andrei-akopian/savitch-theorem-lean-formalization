@@ -246,6 +246,40 @@ noncomputable def zdConcreteStep {Q InputAlphabet Γ : Type*} {k : ℕ}
     foundUntaggedBranch
     backtrackBranch
 
+private theorem encodeRegsTape_split_endMark (W : ℕ) (work : List (Bool × List Bool)) (src : List Bool)
+    (hWork : ∀ r ∈ work, r.2.length = W) (hSrc : src.length = W) :
+    ∃ prefixSyms : List SimSym,
+      encodeRegsTape work src = .leftMark :: prefixSyms ++ [.endMark] ∧
+      (∀ s ∈ prefixSyms, s ≠ .endMark) ∧
+      prefixSyms.length + 2 = 1 + work.length * (W + 2) + (W + 3) := by
+  refine ⟨work.flatMap (fun r => encodeRegEntry r.1 r.2) ++ .srcSep :: .tag true :: src.map .bit,
+    ?_, ?_, ?_⟩
+  · simp [encodeRegsTape, encodeRegsPrefix, encodeSrcEntry, List.append_assoc]
+  · simp only [List.mem_append, List.mem_cons, List.mem_map]
+    intro s hs
+    rcases hs with hs1 | hs2
+    · simp only [List.mem_flatMap] at hs1
+      rcases hs1 with ⟨r, _, hs1⟩
+      simp only [encodeRegEntry, List.mem_append, List.mem_cons, List.mem_map,
+        List.not_mem_nil, or_false] at hs1
+      rcases hs1 with (rfl | ⟨_, _, hEq⟩) | rfl
+      · intro h; cases h
+      · rw [← hEq]; intro h; cases h
+      · intro h; cases h
+    · rcases hs2 with rfl | rfl | ⟨_, _, hEq⟩
+      · intro h; cases h
+      · intro h; cases h
+      · rw [← hEq]; intro h; cases h
+  · have hFlat : (work.flatMap (fun r => encodeRegEntry r.1 r.2)).length = work.length * (W + 2) := by
+      induction work with
+      | nil => simp
+      | cons hd tl ih =>
+        have hHd : (encodeRegEntry hd.1 hd.2).length = W + 2 := by
+          simp [encodeRegEntry, hWork hd (by simp)]
+        simp [List.flatMap_cons, hHd, ih (fun r hr => hWork r (by simp [hr])), Nat.succ_mul]
+        omega
+    simp [hFlat, hSrc]; omega
+
 theorem zdConcreteStep_reachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
     (M : MultitapeNTM Q InputAlphabet Γ k)
@@ -274,7 +308,17 @@ theorem zdConcreteStep_reachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ}
       (zdConcreteStep M).ReachesExit input bound initTapes inHead res finalTapes finalInHead ∧
       match zdAcceptingStep (bitProblem M input S) hN (bitIsAccepting M n S) cfg with
       | .accept => res = .inr true
-      | .reject => res = .inr false
+      | .reject =>
+        res = .inr false ∧
+        TapeMatches (finalTapes tRuler)
+          (.leftMark :: List.replicate S (.bit true) ++ [.endMark]) 1 ∧
+        (∃ prefixSyms : List SimSym,
+          (∀ s ∈ prefixSyms, s ≠ .endMark) ∧
+          prefixSyms.length + 2 ≤ 1 + r * (W + 2) + (W + 3) ∧
+          TapeMatches (finalTapes tRegs) (.leftMark :: prefixSyms ++ [.endMark]) 1) ∧
+        TapeMatches (finalTapes tArgA) [.leftMark] 1 ∧
+        TapeMatches (finalTapes tArgB) [.leftMark] 1 ∧
+        TapeMatches (finalTapes tScratch) [.leftMark] 1
       | .running next =>
         res = .inl () ∧
         ValidZDTags Q Γ n S next ∧
@@ -325,7 +369,17 @@ theorem zdConcreteStep_reachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ}
       ∃ (res : Unit ⊕ Bool) (finalTapes : Fin 5 → OneSidedTape SimSym),
         backtrackBranch.ReachesExit input bound tapes ih res finalTapes ih ∧
         match zdBacktrack hN cfg with
-        | none => res = .inr false
+        | none =>
+          res = .inr false ∧
+          TapeMatches (finalTapes tRuler)
+            (.leftMark :: List.replicate S (.bit true) ++ [.endMark]) 1 ∧
+          (∃ prefixSyms : List SimSym,
+          (∀ s ∈ prefixSyms, s ≠ .endMark) ∧
+          prefixSyms.length + 2 ≤ 1 + r * (W + 2) + (W + 3) ∧
+          TapeMatches (finalTapes tRegs) (.leftMark :: prefixSyms ++ [.endMark]) 1) ∧
+          TapeMatches (finalTapes tArgA) [.leftMark] 1 ∧
+          TapeMatches (finalTapes tArgB) [.leftMark] 1 ∧
+          TapeMatches (finalTapes tScratch) [.leftMark] 1
         | some next =>
           res = .inl () ∧
           ValidZDTags Q Γ n S next ∧
@@ -388,9 +442,17 @@ theorem zdConcreteStep_reachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ}
         by simpa [show tScratch ≠ tRegs by decide] using hMS⟩
     · have hFBM : firstBelowMax cfg = none := (firstBelowMax_none_iff cfg).mpr hNoF
       have hBackNone : zdBacktrack hN cfg = none := by simp [zdBacktrack, hFBM]
+      obtain ⟨prefixSyms, hEqL, hNoE, hLenP⟩ :=
+        encodeRegsTape_split_endMark W work src hWorkBits hSrcLen
       refine ⟨.inr false, fun j => if j = tRegs then ft else tapes j,
         TMComponent.mapExit_reachesExit _ _ input bound hInc, ?_⟩
       rw [hBackNone]
+      refine ⟨rfl,
+        by simpa [show tRuler ≠ tRegs by decide] using hMR,
+        ⟨prefixSyms, hNoE, by rw [hLenP, hWorkLen], by simpa [hEqL] using hFM⟩,
+        by simpa [show tArgA ≠ tRegs by decide] using hMA,
+        by simpa [show tArgB ≠ tRegs by decide] using hMB,
+        by simpa [show tScratch ≠ tRegs by decide] using hMS⟩
   rcases findFirstUntagged_reachesExit input bound W work src hWorkBits hSrcLen
       (by rw [hWorkLen]; exact hBoundRegs) initTapes inHead hBounds0 hMatchRegs with
     ⟨hAllT, ft0, hFindF, hM0⟩ | ⟨pref, cur, suf, hSplit, hCurF, hPrefT, ft0, hFindT, hM0⟩
