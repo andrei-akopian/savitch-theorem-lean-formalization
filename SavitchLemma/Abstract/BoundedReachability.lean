@@ -20,6 +20,8 @@ then gives the at-most bound used in Savitch's midpoint argument.
 
 namespace SavitchLemma
 
+variable {N : ℕ}
+
 /-- An exactly-`n`-edge path in the abstract transition graph. -/
 inductive AbstractPath (P : AbstractProblem N) :
     ℕ → Fin (N + 1) → Fin (N + 1) → Prop where

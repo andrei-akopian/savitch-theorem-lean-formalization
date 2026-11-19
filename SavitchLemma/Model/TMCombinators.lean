@@ -45,6 +45,15 @@ structure TMComponent (Q InputAlphabet Γ : Type*) (k : ℕ) (Exit : Type*) wher
   start : Q
   step : Q → InputSymbol InputAlphabet → (Fin k → Γ) → TMAction (Q ⊕ Exit) Γ k
 
+/-- A `TMComponent` with its state type and `Fintype` instance existentially packaged,
+hiding deep `Sum`/`Prod` state trees so downstream `Fintype` synthesis is O(1). -/
+structure SealedTMComponent (InputAlphabet Γ : Type*) (k : ℕ) (Exit : Type*) where
+  State : Type*
+  [fintype : Fintype State]
+  comp : TMComponent State InputAlphabet Γ k Exit
+
+attribute [instance] SealedTMComponent.fintype
+
 /-- One step of a `TMComponent` on one-sided work tapes, with states in
 `Q ⊕ Exit` where exit states have no outgoing transitions. -/
 def TMComponent.CompStep {Q InputAlphabet Γ : Type*} {k n : ℕ} {Exit : Type*}
@@ -80,6 +89,15 @@ def TMComponent.mapExit {Q InputAlphabet Γ : Type*} {k : ℕ} {Exit₁ Exit₂ 
   start := M.start
   step q inSym workSyms :=
     (M.step q inSym workSyms).mapState (Sum.map id f)
+
+/-- Relabel the internal state type of a `TMComponent` along an equivalence `e : Q ≃ Q'`.
+Used to seal large nested `Sum`/`Prod` state types behind a named `structure` with a
+cached `Fintype` instance. -/
+def TMComponent.relabel {Q Q' InputAlphabet Γ : Type*} {k : ℕ} {Exit : Type*}
+    (M : TMComponent Q InputAlphabet Γ k Exit) (e : Q ≃ Q') :
+    TMComponent Q' InputAlphabet Γ k Exit where
+  start := e M.start
+  step q' inSym workSyms := (M.step (e.symm q') inSym workSyms).mapState (Sum.map e id)
 
 /-- Single-step atomic component. -/
 def TMComponent.atom {InputAlphabet Γ : Type*} {k : ℕ} {Exit : Type*}
@@ -261,6 +279,16 @@ theorem TMComponent.seq_reachesExit {Q₁ Q₂ InputAlphabet Γ : Type*} {k n : 
     (fun | .inl q₂ => .inl (.inr q₂) | .inr e => .inr e)
     (fun q₂ _ _ => ⟨.inr q₂, rfl, rfl⟩) h₂
   exact hLifted₁.trans hLifted₂
+
+/-- Relabeling the state type preserves `ReachesExit`. -/
+theorem TMComponent.relabel_reachesExit {Q Q' InputAlphabet Γ : Type*} {k n : ℕ} {Exit : Type*}
+    (M : TMComponent Q InputAlphabet Γ k Exit) (e : Q ≃ Q')
+    (input : Fin n → InputAlphabet) (bound : Fin k → ℕ)
+    {tapes₀ tapes₁ : Fin k → OneSidedTape Γ} {in₀ in₁ : Fin (n + 2)} {exitVal : Exit}
+    (h : M.ReachesExit input bound tapes₀ in₀ exitVal tapes₁ in₁) :
+    (M.relabel e).ReachesExit input bound tapes₀ in₀ exitVal tapes₁ in₁ :=
+  lift_refTransGen_map M (M.relabel e) input bound (Sum.map e id)
+    (fun q _ _ => ⟨e q, rfl, by simp [TMComponent.relabel]⟩) h
 
 /-- Branching composition of `ReachesExit`. -/
 theorem TMComponent.branch_reachesExit {Q₀ Q₁ Q₂ InputAlphabet Γ : Type*} {k n : ℕ}

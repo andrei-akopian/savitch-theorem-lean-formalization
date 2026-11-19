@@ -13,9 +13,6 @@ Defines `idBody`, `idLoop`, and `savitchDTM_nonmeasurable`, and proves
 `savitchDTM_nonmeasurable_correct`.
 -/
 
-set_option synthInstance.maxSize 200000
-set_option synthInstance.maxHeartbeats 2000000
-
 namespace SavitchLemma
 
 /-! ### Iterative-deepening loop and compiled DTM -/

@@ -18,6 +18,8 @@ tagged register through at most `2^j` transitions.  The printed one-based bound
 
 namespace SavitchLemma
 
+variable {r N : ℕ}
+
 /-- The conclusion for a target register: its value is retained and tagged,
 the prefix is cleared, and the suffix is unchanged. -/
 def TwoThreeOutcome (hN : 1 < N) (initial final : ZDConfig r N)

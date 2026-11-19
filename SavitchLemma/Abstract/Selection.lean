@@ -15,6 +15,8 @@ register-progress proofs easier to read.
 
 namespace SavitchLemma
 
+variable {r N : ℕ}
+
 /-- A successful untagged-register search returns an untagged register, and
 every earlier working register is tagged. -/
 theorem firstUntagged_eq_some_iff (cfg : ZDConfig r N) (j : Fin r) :

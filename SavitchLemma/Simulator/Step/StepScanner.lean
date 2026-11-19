@@ -629,20 +629,27 @@ noncomputable def checkStepEval {Q InputAlphabet Γ : Type*} {k : ℕ}
       decide (∀ t, (summaries t).matchesAction (action.write t) (action.workMove t) = true)
   | _, _ => false
 
+/-- Sealed `checkStep` packaging its `Fintype` state instance. -/
+noncomputable def sealedCheckStep {Q InputAlphabet Γ : Type*} {k : ℕ}
+    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
+    (M : MultitapeNTM Q InputAlphabet Γ k) :
+    SealedTMComponent InputAlphabet SimSym 5 Bool :=
+  ⟨_, letI := Classical.propDecidable
+    (rewindInput InputAlphabet 5).seq
+      (bindComponent (readControlStates Q InputAlphabet) fun qOpt =>
+        bindComponent (readInputHeadAndCheck InputAlphabet) fun inPair =>
+          bindComponent (scanAllWorkTapes InputAlphabet Γ k M.blank) fun sumOpt =>
+            ((rewindTape InputAlphabet tArgA).seq (rewindTape InputAlphabet tArgB)).seq
+              (TMComponent.atom fun _ scanned =>
+                mkWorkAction (checkStepEval M qOpt inPair sumOpt) scanned (fun _ => .stay)))⟩
+
 /-- Full serialized transition-table checker comparing `tArgA` (`before`) and
 `tArgB` (`after`) against `M.transitions`, rewinding `tArgA`, `tArgB`, `tRuler`,
 `tScratch`, and the physical input head to their initial positions. -/
 noncomputable def checkStep {Q InputAlphabet Γ : Type*} {k : ℕ}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
     (M : MultitapeNTM Q InputAlphabet Γ k) :=
-  letI := Classical.propDecidable
-  (rewindInput InputAlphabet 5).seq
-    (bindComponent (readControlStates Q InputAlphabet) fun qOpt =>
-      bindComponent (readInputHeadAndCheck InputAlphabet) fun inPair =>
-        bindComponent (scanAllWorkTapes InputAlphabet Γ k M.blank) fun sumOpt =>
-          ((rewindTape InputAlphabet tArgA).seq (rewindTape InputAlphabet tArgB)).seq
-            (TMComponent.atom fun _ scanned =>
-              mkWorkAction (checkStepEval M qOpt inPair sumOpt) scanned (fun _ => .stay)))
+  (sealedCheckStep M).comp
 
 theorem checkStep_reachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
@@ -942,7 +949,7 @@ theorem checkStep_reachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ}
   have hFull := TMComponent.seq_reachesExit (rewindInput InputAlphabet 5) _ input bound hRewIn hBind1
   rw [hOkEq] at hFull
   refine ⟨t5, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · simpa [checkStep] using hFull
+  · simpa [checkStep, sealedCheckStep] using hFull
   · rw [hOthers5 tRuler (by decide), hOthers4 tRuler (by decide)]
     exact hR3
   · rw [hOthers5 tArgA (by decide)]

@@ -14,6 +14,8 @@ registers.  The target register is `j`; its initial prefix consists of indices
 
 namespace SavitchLemma
 
+variable {r N : ℕ}
+
 /-- The initial prefix shape for Lemma 1. -/
 def LemmaOnePrefix (hN : 1 < N) (cfg : ZDConfig r N) (j : Fin r) : Prop :=
   ∀ k : Fin r, k.val ≤ j.val →

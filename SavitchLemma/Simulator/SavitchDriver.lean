@@ -15,11 +15,19 @@ to obtain `savitchSimulator M`, and proves soundness and completeness against
 
 namespace SavitchLemma
 
+/-- Sealed Savitch simulator packaging its `Fintype` state instance so downstream
+`toDTM` calls do not re-traverse the deep nested `Sum`/`Prod` state tree. -/
+noncomputable def sealedSavitchSimulator {Q InputAlphabet Γ : Type*} {k : ℕ}
+    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
+    (M : MultitapeNTM Q InputAlphabet Γ k) :
+    SealedTMComponent InputAlphabet SimSym 5 Bool :=
+  ⟨_, (initSavitchTapes M).seq (loopWithState () fun _ => zdConcreteStep M)⟩
+
 /-- Full 5-tape deterministic Savitch simulator for a multitape NTM `M`. -/
 noncomputable def savitchSimulator {Q InputAlphabet Γ : Type*} {k : ℕ}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
     (M : MultitapeNTM Q InputAlphabet Γ k) :=
-  (initSavitchTapes M).seq (loopWithState () fun _ => zdConcreteStep M)
+  (sealedSavitchSimulator M).comp
 
 private theorem zdOutcomeStep_deterministic_terminal {r N : ℕ}
     (P : AbstractProblem N) (hN : 1 < N) (isAccepting : Fin (N + 1) → Bool)
@@ -283,8 +291,9 @@ theorem savitchSimulator_reachesExit_clean {Q InputAlphabet Γ : Type*} {k n : �
       (by simpa [tInit, tRuler, tRegs, tArgA] using hMA)
       (by simpa [tInit, tRuler, tRegs, tArgA, tArgB] using hMB)
       (by simpa [tInit, tRuler, tRegs, tArgA, tArgB, tScratch] using hMatchS)
-  refine ⟨res, finalTapes, finalInHead,
-    TMComponent.seq_reachesExit _ _ input bound hInit hLoop, ?_, hClean⟩
+  refine ⟨res, finalTapes, finalInHead, ?_, ?_, hClean⟩
+  · dsimp only [savitchSimulator, sealedSavitchSimulator]
+    exact TMComponent.seq_reachesExit _ _ input bound hInit hLoop
   constructor
   · intro hTrue
     rw [hTrue] at hOutcome

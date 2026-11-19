@@ -22,9 +22,6 @@ Savitch's deterministic simulator tries capacities `S = 1, 2, 3, ...` in order:
 4. If `n > 2 ^ S`, extend `tRuler` from `1^S` to `1^(S+1)` and continue to `S + 1`.
 -/
 
-set_option synthInstance.maxSize 200000
-set_option synthInstance.maxHeartbeats 2000000
-
 namespace SavitchLemma
 
 /-! ### Clean-tape invariant -/

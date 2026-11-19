@@ -13,6 +13,8 @@ assumptions into path facts used by the register-progress argument.
 
 namespace SavitchLemma
 
+variable {r N : ℕ}
+
 /-- No path from a valid source can end at the reserved maximum code. -/
 theorem no_reaches_max (P : AbstractProblem N) (source : ValidCode N) :
     ¬ Relation.ReflTransGen P.step source.val (maxCode N) := by

@@ -17,6 +17,8 @@ the carry/reset behavior of D2 and D3.
 
 namespace SavitchLemma
 
+variable {r N : ℕ}
+
 /-- The natural-valued digit associated to a working register. -/
 def zdDigit (cfg : ZDConfig r N) (i : Fin r) : ℕ :=
   2 * (cfg.x i.castSucc).val + if cfg.tag i.castSucc then 1 else 0

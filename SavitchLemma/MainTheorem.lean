@@ -22,9 +22,6 @@ Formalizes Savitch's Theorem (`NSPACE(L) ⊆ DSPACE(L^2)` for `L(n) ≥ 1` and `
   `IterativeDeepening`).
 -/
 
-set_option synthInstance.maxSize 200000
-set_option synthInstance.maxHeartbeats 2000000
-
 namespace SavitchLemma
 
 /-- The prefix component can build the clean simulator tapes (ruler `1^{L n}`) from blank

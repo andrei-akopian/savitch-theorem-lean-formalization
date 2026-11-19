@@ -28,14 +28,21 @@ noncomputable def writeInitialSrcBits {Q InputAlphabet Γ : Type*} {k : ℕ}
           ((writeFixedBits InputAlphabet tRegs [true, false]).seq
             ((writeEndMarkStayAtom InputAlphabet tRegs).seq (rewindTape InputAlphabet tRegs))))))
 
+/-- Sealed `initSavitchTapes` packaging its `Fintype` state instance. -/
+noncomputable def sealedInitSavitchTapes {Q InputAlphabet Γ : Type*} {k : ℕ}
+    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
+    (M : MultitapeNTM Q InputAlphabet Γ k) :
+    SealedTMComponent InputAlphabet SimSym 5 Unit :=
+  ⟨_, (writeWidthOnes Q Γ k InputAlphabet).seq
+    ((initWorkRegsFromTemplate InputAlphabet).seq (writeInitialSrcBits M))⟩
+
 /-- Full D0 initialization component: prepares `1^W` templates on `tArgA`/`tArgB`,
 builds all `W + 1` working registers initialized to `(false, 1)`, writes the encoded
 initial configuration into the `source` register, and leaves `tRegs` at head `1`. -/
 noncomputable def initSavitchTapes {Q InputAlphabet Γ : Type*} {k : ℕ}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
     (M : MultitapeNTM Q InputAlphabet Γ k) :=
-  (writeWidthOnes Q Γ k InputAlphabet).seq
-    ((initWorkRegsFromTemplate InputAlphabet).seq (writeInitialSrcBits M))
+  (sealedInitSavitchTapes M).comp
 
 theorem encodeConfigBits_initialConfig {Q InputAlphabet Γ : Type*} {k n : ℕ}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
@@ -457,6 +464,8 @@ theorem initSavitchTapes_reachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ}
     | ⟨3, _⟩ => simp [tRuler, tRegs, tArgA, tArgB, t₂, t₁]
     | ⟨4, _⟩ => simp [tRuler, tRegs, tArgA, tArgB, t₂, t₁]
   rw [hFinalEq] at hSeq123
-  exact ⟨r₃, reg₃, a₂, b₂, hSeq123, hMR₃, hMReg₃, hMA₂, hMB₂⟩
+  refine ⟨r₃, reg₃, a₂, b₂, ?_, hMR₃, hMReg₃, hMA₂, hMB₂⟩
+  dsimp only [initSavitchTapes, sealedInitSavitchTapes]
+  exact hSeq123
 
 end SavitchLemma

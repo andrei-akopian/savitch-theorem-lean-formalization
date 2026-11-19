@@ -53,10 +53,14 @@ theorem zdInitial_source (r N : ℕ) (hN : 1 < N) (source : ValidCode N) :
     (zdInitial r N hN source).x (Fin.last r) = source.val := by
   simp [zdInitial]
 
+variable {r N : ℕ}
+
 /-- The distinguished source register starts tagged. -/
 theorem zdInitial_source_tag (r N : ℕ) (hN : 1 < N) (source : ValidCode N) :
     (zdInitial r N hN source).tag (Fin.last r) = true := by
   simp [zdInitial]
+
+variable {r N : ℕ}
 
 /-- Find the least untagged working register.  `List.finRange` is ordered by
 the natural value of each `Fin`, so `find?` implements Savitch's least-index

@@ -13,6 +13,8 @@ by both D2 and D3.
 
 namespace SavitchLemma
 
+variable {r N : ℕ}
+
 /-- The selected register receives exactly the supplied value and tag. -/
 theorem updateAndReset_at_current (hN : 1 < N) (cfg : ZDConfig r N) (j : Fin r)
     (value : Fin (N + 1)) (newTag : Bool) :

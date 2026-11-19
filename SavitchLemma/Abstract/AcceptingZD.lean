@@ -14,6 +14,8 @@ explicit rejection when all working registers reach the maximum code.
 
 namespace SavitchLemma
 
+variable {r N : ℕ}
+
 /-- Result of one step of the unmodified register machine. -/
 inductive ZDOutcome (r N : ℕ) where
   | running (cfg : ZDConfig r N)

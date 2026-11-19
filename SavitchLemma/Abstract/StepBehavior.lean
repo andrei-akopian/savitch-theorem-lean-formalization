@@ -15,6 +15,8 @@ the local transition facts used by the register-progress induction.
 
 namespace SavitchLemma
 
+variable {r N : ℕ}
+
 /-- If every working register is tagged, D1 sends control to D3. -/
 theorem zdStep_of_all_tagged (P : AbstractProblem N) (hN : 1 < N)
     (cfg : ZDConfig r N) (hNone : firstUntagged cfg = none) :

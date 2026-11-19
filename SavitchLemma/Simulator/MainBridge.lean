@@ -15,9 +15,6 @@ The result is compiled with `TMComponent.toDTM`, giving a deterministic machine 
 accepts within space `B` iff `M` accepts within capacity `S`, and never accepts otherwise.
 -/
 
-set_option synthInstance.maxSize 200000
-set_option synthInstance.maxHeartbeats 2000000
-
 namespace SavitchLemma
 
 /-- Prefix hypothesis: from blank tapes (all heads `0`), `P` reaches its exit with every

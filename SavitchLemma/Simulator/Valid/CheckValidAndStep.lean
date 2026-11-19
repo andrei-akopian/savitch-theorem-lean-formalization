@@ -402,16 +402,23 @@ private theorem checkStep_reachesExit_invalidInHead {Q InputAlphabet Γ : Type*}
   · rw [hOthers5 tRegs (by decide), hOthers4 tRegs (by decide), hReg3, hReg2]
     simp [t1, show tRegs ≠ tArgA by decide, show tRegs ≠ tArgB by decide]
 
+/-- Sealed `checkValidAndStep` packaging its `Fintype` state instance. -/
+noncomputable def sealedCheckValidAndStep {Q InputAlphabet Γ : Type*} {k : ℕ}
+    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
+    (M : MultitapeNTM Q InputAlphabet Γ k) :
+    SealedTMComponent InputAlphabet SimSym 5 Bool :=
+  ⟨_, TMComponent.branch
+    (checkValidB Q InputAlphabet Γ k)
+    (checkStep M)
+    (TMComponent.atom fun (_ : InputSymbol InputAlphabet) (scanned : Fin 5 → SimSym) =>
+      mkWorkAction false scanned (fun _ => .stay))⟩
+
 /-- Combined validity + transition checker on `tArgA` (`before`) and `tArgB`
 (arbitrary `configBitWidth Q Γ k S`-bit list `bs`). -/
 noncomputable def checkValidAndStep {Q InputAlphabet Γ : Type*} {k : ℕ}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
     (M : MultitapeNTM Q InputAlphabet Γ k) :=
-  TMComponent.branch
-    (checkValidB Q InputAlphabet Γ k)
-    (checkStep M)
-    (TMComponent.atom fun (_ : InputSymbol InputAlphabet) (scanned : Fin 5 → SimSym) =>
-      mkWorkAction false scanned (fun _ => .stay))
+  (sealedCheckValidAndStep M).comp
 
 theorem checkValidAndStep_reachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
@@ -494,7 +501,9 @@ theorem checkValidAndStep_reachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ}
       · intro j; simpa [mkWorkAction] using OneSidedTape.updateAndMove_stay_self (t1 j)
     have hBranch := TMComponent.branch_reachesExit (checkValidB Q InputAlphabet Γ k)
       (checkStep M) _ input bound false (by simpa [hV] using hValidRun) hFalseAtom
-    refine ⟨false, t1, inHead, hBranch, ?_, hR1, hT1A, hB1, hS1, hT1Reg⟩
+    refine ⟨false, t1, inHead, ?_, ?_, hR1, hT1A, hB1, hS1, hT1Reg⟩
+    · dsimp only [checkValidAndStep, sealedCheckValidAndStep]
+      exact hBranch
     simp only [Bool.false_eq_true, false_iff, not_exists, not_and]
     intro after hEq _
     exact hNotValid ⟨after, hEq⟩
@@ -522,8 +531,11 @@ theorem checkValidAndStep_reachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ}
         (TMComponent.atom fun (_ : InputSymbol InputAlphabet) (scanned : Fin 5 → SimSym) =>
           mkWorkAction false scanned (fun _ => .stay))
         input bound true (by simpa [hV] using hValidRun) hStepRun
-      refine ⟨res, finalTapes, ⟨0, by omega⟩, hBranch, ?_, hR2, hA2, hB2, hS2,
-        hReg2.trans hT1Reg⟩
+      refine ⟨res, finalTapes, ⟨0, by omega⟩,
+        by
+          dsimp only [checkValidAndStep, sealedCheckValidAndStep]
+          exact hBranch,
+        ?_, hR2, hA2, hB2, hS2, hReg2.trans hT1Reg⟩
       rw [hStepIff]
       constructor
       · intro hStep; exact ⟨after, rfl, hStep⟩

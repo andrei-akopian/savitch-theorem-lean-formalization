@@ -20,7 +20,3 @@ public import SavitchLemma.MainTheorem
 
 Formalization of Savitch's theorem and its supporting definitions.
 -/
-
-namespace SavitchLemma
-
-end SavitchLemma
