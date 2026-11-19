@@ -36,25 +36,8 @@ theorem PrefixPrepares.mono {QP InputAlphabet : Type*} {n : ℕ}
     {P : TMComponent QP InputAlphabet SimSym 5 Unit} {input : Fin n → InputAlphabet}
     {S B B' : ℕ} {initTapes : Fin 5 → OneSidedTape SimSym} {inHead : Fin (n + 2)}
     (h : PrefixPrepares P input S B initTapes inHead) (hB : B ≤ B') :
-    PrefixPrepares P input S B' initTapes inHead := by
-  obtain ⟨hR, rest⟩ := h
-  refine ⟨?_, rest⟩
-  unfold TMComponent.ReachesExit at hR ⊢
-  have key : ∀ a b, Relation.ReflTransGen
-      (fun a b => P.CompStep input a b ∧
-        (∀ t, (a.workTapes t).head < (fun _ => B) t) ∧
-        (∀ t, (b.workTapes t).head < (fun _ => B) t)) a b →
-      Relation.ReflTransGen
-      (fun a b => P.CompStep input a b ∧
-        (∀ t, (a.workTapes t).head < (fun _ => B') t) ∧
-        (∀ t, (b.workTapes t).head < (fun _ => B') t)) a b := by
-    intro a b h
-    induction h with
-    | refl => exact Relation.ReflTransGen.refl
-    | tail _ h ih =>
-      exact ih.tail ⟨h.1, fun t => lt_of_lt_of_le (h.2.1 t) hB,
-        fun t => lt_of_lt_of_le (h.2.2 t) hB⟩
-  exact key _ _ hR
+    PrefixPrepares P input S B' initTapes inHead :=
+  ⟨h.1.mono (fun _ => hB), h.2⟩
 
 /-- Space used by the compiled deterministic machine at capacity `S`. -/
 def savitchSpace (Q Γ : Type) [Fintype Q] [Fintype Γ] (k c S : ℕ) : ℕ :=
@@ -168,7 +151,16 @@ theorem savitch_theorem_one_of_measurable {Q Γ InputAlphabet : Type} {k : ℕ}
       D.AcceptsLanguageWithinSpace A L' ∧ ∀ n, L' n ≤ C * (L n + 1) ^ 2 :=
   savitch_theorem_one M A L (rulerWriter_of_measurable hMeas fun n => (hL n).1) hL hM
 
-/-- **Theorem 1** (general, non-measurable space bounds `L` via iterative deepening). -/
+/-- **Theorem 1 (Savitch's Theorem)**: `NSPACE(L) ⊆ DSPACE(L^2)` for every
+space bound `L` satisfying `1 ≤ L n` and `n ≤ 2 ^ L n`, without assuming `L` is
+tape-constructible ("measurable").
+
+Given any `k`-work-tape nondeterministic Turing machine `M` accepting a language
+`A` within space `L`, there exists a 5-work-tape deterministic Turing machine `D`
+(over the fixed alphabet `SimSym`) and a constant `C` such that `D` accepts `A`
+within space `L' n ≤ C * (L n + 1) ^ 2`. Writing `(L n + 1) ^ 2` rather than
+`L n ^ 2` absorbs additive constants into `C` and is equivalent to `O(L(n)^2)`
+since `1 ≤ L n`. -/
 theorem savitch_theorem_one_full {Q Γ InputAlphabet : Type} {k : ℕ}
     [Fintype Q] [Fintype Γ] [Fintype InputAlphabet]
     (M : MultitapeNTM Q InputAlphabet Γ k)

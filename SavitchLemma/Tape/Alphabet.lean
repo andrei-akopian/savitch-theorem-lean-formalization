@@ -131,6 +131,32 @@ theorem TapeMatches.update_append {tape : OneSidedTape SimSym} {contents : List 
           simp; omega
         rw [hNone1, hNone2]
 
+theorem TapeMatches.update_append_left {tape : OneSidedTape SimSym} {contents : List SimSym}
+    (h : TapeMatches tape contents contents.length) (hPos : 1 ≤ contents.length) (sym : SimSym) :
+    ∃ nextTape, tape.updateAndMove sym .left = some nextTape ∧
+      TapeMatches nextTape (contents ++ [sym]) (contents.length - 1) := by
+  have hMove : moveOneSidedHead tape.head .left = some (contents.length - 1) := by
+    simp [moveOneSidedHead, h.1, show contents.length ≠ 0 by omega]
+  refine ⟨⟨fun i => if i = tape.head then sym else tape.cells i, contents.length - 1⟩,
+    ?_, rfl, ?_⟩
+  · simp [OneSidedTape.updateAndMove, hMove]
+  · intro i
+    dsimp only
+    rw [h.1]
+    by_cases hi : i = contents.length
+    · subst hi
+      simp
+    · simp only [hi, ↓reduceIte]
+      rw [h.2 i]
+      by_cases hLt : i < contents.length
+      · rw [List.getElem?_append_left hLt]
+      · have hGt : contents.length < i := by omega
+        have hNone1 : contents[i]? = none := List.getElem?_eq_none (by omega)
+        have hNone2 : (contents ++ [sym])[i]? = none := by
+          apply List.getElem?_eq_none
+          simp; omega
+        rw [hNone1, hNone2]
+
 theorem TapeMatches.update_keep {tape : OneSidedTape SimSym} {contents : List SimSym}
     {pos : ℕ} (h : TapeMatches tape contents pos) (mv : TapeMove)
     {nextPos : ℕ} (hMove : moveOneSidedHead pos mv = some nextPos) :

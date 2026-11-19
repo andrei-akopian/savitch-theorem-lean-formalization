@@ -1,7 +1,7 @@
 module
 
 public import SavitchLemma.Abstract.AcceptingZD
-public import SavitchLemma.TapePrimitives
+public import SavitchLemma.Tape.Comparison
 
 @[expose] public section
 

@@ -1,9 +1,9 @@
 module
 
 public import SavitchLemma.Model.ConcreteEncoding
-public import SavitchLemma.RegisterTapeOps
+public import SavitchLemma.RegisterTape.Initialization
 public import SavitchLemma.Model.TMCombinators
-public import SavitchLemma.TapePrimitives
+public import SavitchLemma.Tape.Comparison
 
 @[expose] public section
 

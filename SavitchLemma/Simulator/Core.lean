@@ -2,7 +2,7 @@ module
 
 public import SavitchLemma.Abstract.AcceptingZD
 public import SavitchLemma.Model.ConcreteEncoding
-public import SavitchLemma.RegisterTapeOps
+public import SavitchLemma.RegisterTape.Initialization
 
 @[expose] public section
 

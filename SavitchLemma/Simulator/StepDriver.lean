@@ -222,29 +222,37 @@ private theorem encodeZDRegs_updateAndReset {r W N : ℕ} (hN : 1 < N)
 
 /-! ### Concrete D1–D3 step component -/
 
+/-- Sealed `zdConcreteStep` packaging its `Fintype` state instance. -/
+noncomputable def sealedZdConcreteStep {Q InputAlphabet Γ : Type*} {k : ℕ}
+    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
+    (M : MultitapeNTM Q InputAlphabet Γ k) :
+    SealedTMComponent InputAlphabet SimSym 5 (Unit ⊕ Bool) :=
+  ⟨_,
+    let backtrackBranch :=
+      (incFirstRegBelowMax InputAlphabet).mapExit fun hasNext =>
+        if hasNext then (.inl () : Unit ⊕ Bool) else (.inr false : Unit ⊕ Bool)
+    let accTrueBranch :=
+      TMComponent.atom fun (_ : InputSymbol InputAlphabet) (scanned : Fin 5 → SimSym) =>
+        mkWorkAction (.inr true : Unit ⊕ Bool) scanned (fun _ => .stay)
+    let accFalseBranch :=
+      bindComponent (clearTape InputAlphabet tArgB) fun _ =>
+        (findFirstUntaggedAndTag InputAlphabet).mapExit fun _ => (.inl () : Unit ⊕ Bool)
+    let reachTrueBranch := (checkAccepting M).branch accTrueBranch accFalseBranch
+    let reachFalseBranch := bindComponent (clearTape InputAlphabet tArgB) fun _ => backtrackBranch
+    let foundUntaggedBranch :=
+      bindComponent (copyRegBitsTo InputAlphabet tArgB) fun _ =>
+        bindComponent (rewindTape InputAlphabet tRegs) fun _ =>
+          (checkReachableLoop M).branch reachTrueBranch reachFalseBranch
+    (findFirstUntagged InputAlphabet).branch
+      foundUntaggedBranch
+      backtrackBranch⟩
+
 /-- Concrete single step of Savitch's `D1`–`D3` machine on the 5 simulation tapes.
 Exits with `.inl ()` to continue looping, `.inr true` to accept, or `.inr false` to reject. -/
 noncomputable def zdConcreteStep {Q InputAlphabet Γ : Type*} {k : ℕ}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
     (M : MultitapeNTM Q InputAlphabet Γ k) :=
-  let backtrackBranch :=
-    (incFirstRegBelowMax InputAlphabet).mapExit fun hasNext =>
-      if hasNext then (.inl () : Unit ⊕ Bool) else (.inr false : Unit ⊕ Bool)
-  let accTrueBranch :=
-    TMComponent.atom fun (_ : InputSymbol InputAlphabet) (scanned : Fin 5 → SimSym) =>
-      mkWorkAction (.inr true : Unit ⊕ Bool) scanned (fun _ => .stay)
-  let accFalseBranch :=
-    bindComponent (clearTape InputAlphabet tArgB) fun _ =>
-      (findFirstUntaggedAndTag InputAlphabet).mapExit fun _ => (.inl () : Unit ⊕ Bool)
-  let reachTrueBranch := (checkAccepting M).branch accTrueBranch accFalseBranch
-  let reachFalseBranch := bindComponent (clearTape InputAlphabet tArgB) fun _ => backtrackBranch
-  let foundUntaggedBranch :=
-    bindComponent (copyRegBitsTo InputAlphabet tArgB) fun _ =>
-      bindComponent (rewindTape InputAlphabet tRegs) fun _ =>
-        (checkReachableLoop M).branch reachTrueBranch reachFalseBranch
-  (findFirstUntagged InputAlphabet).branch
-    foundUntaggedBranch
-    backtrackBranch
+  (sealedZdConcreteStep M).comp
 
 private theorem encodeRegsTape_split_endMark (W : ℕ) (work : List (Bool × List Bool)) (src : List Bool)
     (hWork : ∀ r ∈ work, r.2.length = W) (hSrc : src.length = W) :

@@ -82,6 +82,58 @@ def TMComponent.ReachesExit {Q InputAlphabet Γ : Type*} {k n : ℕ} {Exit : Typ
     ⟨.inl M.start, initInHead, initTapes⟩
     ⟨.inr e, finalInHead, finalTapes⟩
 
+/-- Monotonicity of `ReachesExit` in the per-tape head bound. -/
+theorem TMComponent.ReachesExit.mono {Q InputAlphabet Γ : Type*} {k n : ℕ} {Exit : Type*}
+    {M : TMComponent Q InputAlphabet Γ k Exit} {input : Fin n → InputAlphabet}
+    {bound bound' : Fin k → ℕ} (hB : ∀ t, bound t ≤ bound' t)
+    {initTapes finalTapes : Fin k → OneSidedTape Γ} {initInHead finalInHead : Fin (n + 2)}
+    {e : Exit}
+    (hR : M.ReachesExit input bound initTapes initInHead e finalTapes finalInHead) :
+    M.ReachesExit input bound' initTapes initInHead e finalTapes finalInHead := by
+  have key : ∀ cfg,
+      Relation.ReflTransGen
+        (fun a b => M.CompStep input a b ∧
+          (∀ t, (a.workTapes t).head < bound t) ∧
+          (∀ t, (b.workTapes t).head < bound t))
+        ⟨.inl M.start, initInHead, initTapes⟩ cfg →
+      Relation.ReflTransGen
+        (fun a b => M.CompStep input a b ∧
+          (∀ t, (a.workTapes t).head < bound' t) ∧
+          (∀ t, (b.workTapes t).head < bound' t))
+        ⟨.inl M.start, initInHead, initTapes⟩ cfg := by
+    intro cfg h
+    induction h with
+    | refl => exact Relation.ReflTransGen.refl
+    | tail _ h ih =>
+      exact ih.tail ⟨h.1, fun t => lt_of_lt_of_le (h.2.1 t) (hB t),
+        fun t => lt_of_lt_of_le (h.2.2 t) (hB t)⟩
+  exact key _ hR
+
+/-- Single bounded step of a `TMComponent` from internal state `q` to `nextState`. -/
+theorem TMComponent.step_one {Q InputAlphabet Γ : Type*} {k n : ℕ} {Exit : Type*}
+    (M : TMComponent Q InputAlphabet Γ k Exit)
+    (input : Fin n → InputAlphabet) (bound : Fin k → ℕ)
+    (q : Q) (inHead nextInHead : Fin (n + 2))
+    (tapes nextTapes : Fin k → OneSidedTape Γ)
+    (nextState : Q ⊕ Exit)
+    (hNextState : (M.step q (readInput input inHead)
+      (fun t => (tapes t).cells (tapes t).head)).nextState = nextState)
+    (hIn : moveHead (n + 2) inHead
+      (M.step q (readInput input inHead)
+        (fun t => (tapes t).cells (tapes t).head)).inputMove = some nextInHead)
+    (hTapes : ∀ t, (tapes t).updateAndMove
+      ((M.step q (readInput input inHead) (fun t => (tapes t).cells (tapes t).head)).write t)
+      ((M.step q (readInput input inHead) (fun t => (tapes t).cells (tapes t).head)).workMove t) =
+      some (nextTapes t))
+    (hBounds : ∀ t, (tapes t).head < bound t)
+    (hNextBounds : ∀ t, (nextTapes t).head < bound t) :
+    Relation.ReflTransGen
+      (fun a b => M.CompStep input a b ∧
+        (∀ t, (a.workTapes t).head < bound t) ∧
+        (∀ t, (b.workTapes t).head < bound t))
+      ⟨.inl q, inHead, tapes⟩ ⟨nextState, nextInHead, nextTapes⟩ :=
+  Relation.ReflTransGen.single ⟨⟨q, rfl, hNextState.symm, nextInHead, hIn, rfl, hTapes⟩, hBounds, hNextBounds⟩
+
 /-- Map the exit values of a component. -/
 def TMComponent.mapExit {Q InputAlphabet Γ : Type*} {k : ℕ} {Exit₁ Exit₂ : Type*}
     (M : TMComponent Q InputAlphabet Γ k Exit₁) (f : Exit₁ → Exit₂) :

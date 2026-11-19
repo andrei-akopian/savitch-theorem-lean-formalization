@@ -1,13 +1,11 @@
 module
 
-public import Mathlib.Data.Fin.Basic
-public import Mathlib.Data.Fintype.Basic
 public import Mathlib.Data.Fintype.Card
 public import Mathlib.Data.Fintype.Pi
 public import Mathlib.Data.Fintype.Prod
 public import Mathlib.Data.Finset.Card
 public import Mathlib.Data.Finset.Lattice.Fold
-public import Mathlib.Logic.Relation
+public import SavitchLemma.Model.MachineDefinitions
 
 import Mathlib.Tactic.Positivity
 import Mathlib.Data.Fintype.BigOperators
@@ -17,48 +15,19 @@ import Mathlib.Data.Fintype.BigOperators
 /-!
 # A finite-capacity multitape nondeterministic machine
 
-Work tapes are represented by a cell function `Fin S → Γ` and a head position
-in `Fin S`.  A computation at capacity `S` cannot move a work-tape head beyond
-those `S` cells.  For each fixed input and capacity, configurations form a
-finite type, which will later provide the IDs used by the abstract register
-machine.
+Internal proof machinery relating the external one-sided machine definitions in
+`SavitchLemma.Model.MachineDefinitions` to fixed-capacity (`BoundedTape`,
+`TMConfig`, `AcceptsWithinCapacity`) computations.  For each fixed input and
+capacity, bounded configurations form a finite type (`tmConfig_finite`,
+`tmConfig_card`), which provides the IDs used by the abstract register machine.
 -/
 
 namespace SavitchLemma
-
-/-- A head movement by one cell, or no movement. -/
-inductive TapeMove where
-  | left
-  | stay
-  | right
-
-/-- The read-only input tape has explicit end-marker symbols. -/
-inductive InputSymbol (InputAlphabet : Type*) where
-  | leftEnd
-  | symbol (value : InputAlphabet)
-  | rightEnd
-
-/-- Read one cell of the input tape.  Positions `0` and `n + 1` hold the
-left and right markers; the input symbols occupy positions `1` through `n`. -/
-def readInput {InputAlphabet : Type*} {n : ℕ} (input : Fin n → InputAlphabet)
-    (position : Fin (n + 2)) : InputSymbol InputAlphabet :=
-  if hLeft : position.val = 0 then
-    .leftEnd
-  else if hRight : position.val = n + 1 then
-    .rightEnd
-  else
-    .symbol (input ⟨position.val - 1, by omega⟩)
 
 /-- A work tape restricted to `S` cells. -/
 structure BoundedTape (Γ : Type*) (S : ℕ) where
   cells : Fin S → Γ
   head : Fin S
-
-/-- The usual one-sided infinite work tape, used to state the relation between
-finite capacity and unbounded space. -/
-structure OneSidedTape (Γ : Type*) where
-  cells : ℕ → Γ
-  head : ℕ
 
 /-- A bounded tape is equivalent to its cells and head position. -/
 def BoundedTape.equivProd {Γ : Type*} (S : ℕ) :
@@ -91,27 +60,6 @@ theorem BoundedTape.nonblankCells_card_le {Γ : Type*} {S : ℕ}
 theorem BoundedTape.head_prefix_size {Γ : Type*} {S : ℕ} (tape : BoundedTape Γ S) :
     tape.head.val + 1 ≤ S := Nat.succ_le_of_lt tape.head.isLt
 
-/-- Move a head without leaving its finite tape segment. -/
-def moveHead (S : ℕ) (position : Fin S) : TapeMove → Option (Fin S)
-  | .left =>
-    if h : 0 < position.val then
-      some ⟨position.val - 1, by omega⟩
-    else
-      none
-  | .stay => some position
-  | .right =>
-    if h : position.val + 1 < S then
-      some ⟨position.val + 1, h⟩
-    else
-      none
-
-/-- Head movement on the one-sided infinite tape.  Moving left at the origin
-is disallowed, matching the finite-capacity model's left boundary. -/
-def moveOneSidedHead (position : ℕ) : TapeMove → Option ℕ
-  | .left => if 0 < position then some (position - 1) else none
-  | .stay => some position
-  | .right => some (position + 1)
-
 /-- Every successful finite head move agrees with the corresponding one-sided
 unbounded head move. -/
 theorem moveHead_toOneSided {S : ℕ} (position : Fin S) (movement : TapeMove)
@@ -137,13 +85,6 @@ theorem moveHead_toOneSided {S : ℕ} (position : Fin S) (movement : TapeMove)
 def BoundedTape.updateAndMove {Γ : Type*} {S : ℕ} (tape : BoundedTape Γ S)
     (symbol : Γ) (movement : TapeMove) : Option (BoundedTape Γ S) := do
   match moveHead S tape.head movement with
-  | none => none
-  | some head => some ⟨fun i => if i = tape.head then symbol else tape.cells i, head⟩
-
-/-- Write one symbol and move on a one-sided infinite tape. -/
-def OneSidedTape.updateAndMove {Γ : Type*} (tape : OneSidedTape Γ)
-    (symbol : Γ) (movement : TapeMove) : Option (OneSidedTape Γ) :=
-  match moveOneSidedHead tape.head movement with
   | none => none
   | some head => some ⟨fun i => if i = tape.head then symbol else tape.cells i, head⟩
 
@@ -266,17 +207,6 @@ def TMConfig.scannedWork {Q Γ : Type*} {k n S : ℕ}
     (cfg : TMConfig Q Γ k n S) : Fin k → Γ :=
   fun tape => (cfg.workTapes tape).cells (cfg.workTapes tape).head
 
-/-- A configuration with one-sided infinite work tapes. -/
-structure OneSidedTMConfig (Q Γ : Type*) (k n : ℕ) where
-  state : Q
-  inputHead : Fin (n + 2)
-  workTapes : Fin k → OneSidedTape Γ
-
-/-- The symbols scanned on the one-sided work tapes. -/
-def OneSidedTMConfig.scannedWork {Q Γ : Type*} {k n : ℕ}
-    (cfg : OneSidedTMConfig Q Γ k n) : Fin k → Γ :=
-  fun tape => (cfg.workTapes tape).cells (cfg.workTapes tape).head
-
 /-- Extend all bounded work tapes by blank cells. -/
 def TMConfig.toOneSided {Q Γ : Type*} {k n S : ℕ}
     (cfg : TMConfig Q Γ k n S) (blank : Γ) : OneSidedTMConfig Q Γ k n where
@@ -290,11 +220,6 @@ def OneSidedTMConfig.FitsCapacity {Q Γ : Type*} {k n : ℕ}
     (cfg : OneSidedTMConfig Q Γ k n) (blank : Γ) (S : ℕ) : Prop :=
   ∀ tape : Fin k, (cfg.workTapes tape).head < S ∧
     ∀ i : ℕ, S ≤ i → (cfg.workTapes tape).cells i = blank
-
-/-- All work-tape heads in a one-sided configuration lie below `S`. -/
-def OneSidedTMConfig.HeadsWithin {Q Γ : Type*} {k n : ℕ}
-    (cfg : OneSidedTMConfig Q Γ k n) (S : ℕ) : Prop :=
-  ∀ tape : Fin k, (cfg.workTapes tape).head < S
 
 theorem OneSidedTMConfig.FitsCapacity.headsWithin {Q Γ : Type*} {k n S : ℕ}
     {cfg : OneSidedTMConfig Q Γ k n} {blank : Γ} (hFit : cfg.FitsCapacity blank S) :
@@ -373,22 +298,6 @@ instance TMConfig.fintype {Q Γ : Type*} [Fintype Q] [Fintype Γ]
   Fintype.ofEquiv (Q × Fin (n + 2) × (Fin k → BoundedTape Γ S))
     (TMConfig.equivProd k n S).symm
 
-/-- One possible nondeterministic transition action. -/
-structure TMAction (Q Γ : Type*) (k : ℕ) where
-  nextState : Q
-  inputMove : TapeMove
-  write : Fin k → Γ
-  workMove : Fin k → TapeMove
-
-/-- A multitape nondeterministic machine with finite-state data.  `transitions`
-returns a finite list, so each machine step has finite branching. -/
-structure MultitapeNTM (Q InputAlphabet Γ : Type*) (k : ℕ)
-    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ] where
-  startState : Q
-  blank : Γ
-  accepting : Q → Prop
-  transitions : Q → InputSymbol InputAlphabet → (Fin k → Γ) → List (TMAction Q Γ k)
-
 /-- The initially blank work tapes and leftmost input-head position. -/
 def MultitapeNTM.initialConfig {Q InputAlphabet Γ : Type*} {k n : ℕ}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
@@ -405,20 +314,6 @@ def MultitapeNTM.step {Q InputAlphabet Γ : Type*} {k n : ℕ}
     (M : MultitapeNTM Q InputAlphabet Γ k)
     (input : Fin n → InputAlphabet) (capacity : ℕ)
     (cfg next : TMConfig Q Γ k n capacity) : Prop :=
-  ∃ action,
-    action ∈ M.transitions cfg.state (readInput input cfg.inputHead) cfg.scannedWork ∧
-    next.state = action.nextState ∧
-    ∃ inputHead, moveHead (n + 2) cfg.inputHead action.inputMove = some inputHead ∧
-      next.inputHead = inputHead ∧
-      ∀ tape : Fin k,
-        (cfg.workTapes tape).updateAndMove (action.write tape) (action.workMove tape) =
-          some (next.workTapes tape)
-
-/-- The same transition relation on one-sided infinite work tapes. -/
-def MultitapeNTM.oneSidedStep {Q InputAlphabet Γ : Type*} {k n : ℕ}
-    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
-    (M : MultitapeNTM Q InputAlphabet Γ k) (input : Fin n → InputAlphabet)
-    (cfg next : OneSidedTMConfig Q Γ k n) : Prop :=
   ∃ action,
     action ∈ M.transitions cfg.state (readInput input cfg.inputHead) cfg.scannedWork ∧
     next.state = action.nextState ∧
@@ -458,15 +353,6 @@ theorem MultitapeNTM.boundedRun_lifts_toOneSided {Q InputAlphabet Γ : Type*} {k
   | @tail previous current hPrevious hStep ih =>
     exact Relation.ReflTransGen.tail ih
       (M.step_lifts_toOneSided input capacity previous current hStep)
-
-/-- The initially blank work tapes and leftmost input-head position on one-sided
-infinite work tapes. -/
-def MultitapeNTM.oneSidedInitialConfig {Q InputAlphabet Γ : Type*} {k n : ℕ}
-    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
-    (M : MultitapeNTM Q InputAlphabet Γ k) : OneSidedTMConfig Q Γ k n where
-  state := M.startState
-  inputHead := ⟨0, by omega⟩
-  workTapes := fun _ => ⟨fun _ => M.blank, 0⟩
 
 /-- Extending the bounded initial configuration yields the one-sided initial
 configuration. -/
@@ -547,24 +433,6 @@ theorem MultitapeNTM.oneSidedRun_restricts_toBounded {Q InputAlphabet Γ : Type*
     refine ⟨hCurrHeads, Relation.ReflTransGen.tail hPrevRun ?_⟩
     exact M.oneSidedStep_restricts_toBounded input capacity hOneStep hPrevHeads hCurrHeads
 
-/-- Acceptance on unbounded one-sided work tapes. -/
-def MultitapeNTM.AcceptsOneSided {Q InputAlphabet Γ : Type*} {k n : ℕ}
-    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
-    (M : MultitapeNTM Q InputAlphabet Γ k) (input : Fin n → InputAlphabet) : Prop :=
-  ∃ final : OneSidedTMConfig Q Γ k n,
-    Relation.ReflTransGen (M.oneSidedStep input) M.oneSidedInitialConfig final ∧
-    M.accepting final.state
-
-/-- Acceptance on one-sided work tapes with all heads staying below `capacity`. -/
-def MultitapeNTM.AcceptsOneSidedWithin {Q InputAlphabet Γ : Type*} {k n : ℕ}
-    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
-    (M : MultitapeNTM Q InputAlphabet Γ k) (input : Fin n → InputAlphabet)
-    (capacity : ℕ) : Prop :=
-  ∃ final : OneSidedTMConfig Q Γ k n,
-    Relation.ReflTransGen
-      (fun a b => M.oneSidedStep input a b ∧ a.HeadsWithin capacity ∧ b.HeadsWithin capacity)
-      M.oneSidedInitialConfig final ∧ M.accepting final.state
-
 /-- A space-bounded one-sided accepting run is also an unbounded accepting run. -/
 theorem MultitapeNTM.acceptsOneSided_of_acceptsOneSidedWithin
     {Q InputAlphabet Γ : Type*} {k n : ℕ}
@@ -608,60 +476,6 @@ theorem MultitapeNTM.acceptsOneSidedWithin_iff_acceptsWithinCapacity
     rw [M.initialConfig_toOneSided capacity hCapacity] at hLifted
     exact ⟨final.toOneSided M.blank, hLifted, hAcc⟩
 
-/-- A deterministic multitape Turing machine has at most one transition per
-state and scanned symbols. -/
-structure MultitapeDTM (Q InputAlphabet Γ : Type*) (k : ℕ)
-    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ] where
-  startState : Q
-  blank : Γ
-  accepting : Q → Prop
-  transition : Q → InputSymbol InputAlphabet → (Fin k → Γ) → Option (TMAction Q Γ k)
-
-/-- View a deterministic multitape machine as a nondeterministic one. -/
-def MultitapeDTM.toNTM {Q InputAlphabet Γ : Type*} {k : ℕ}
-    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
-    (D : MultitapeDTM Q InputAlphabet Γ k) : MultitapeNTM Q InputAlphabet Γ k where
-  startState := D.startState
-  blank := D.blank
-  accepting := D.accepting
-  transitions q inSym workSyms := (D.transition q inSym workSyms).toList
-
-/-- One-sided acceptance for a deterministic machine. -/
-def MultitapeDTM.AcceptsOneSided {Q InputAlphabet Γ : Type*} {k n : ℕ}
-    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
-    (D : MultitapeDTM Q InputAlphabet Γ k) (input : Fin n → InputAlphabet) : Prop :=
-  D.toNTM.AcceptsOneSided input
-
-/-- One-sided space-bounded acceptance for a deterministic machine. -/
-def MultitapeDTM.AcceptsOneSidedWithin {Q InputAlphabet Γ : Type*} {k n : ℕ}
-    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
-    (D : MultitapeDTM Q InputAlphabet Γ k) (input : Fin n → InputAlphabet)
-    (capacity : ℕ) : Prop :=
-  D.toNTM.AcceptsOneSidedWithin input capacity
-
-/-- A language `A` is accepted by `M` within storage `L(n)` when every accepted
-input has a space-`L(n)` accepting run and `M` accepts no input outside `A`. -/
-def MultitapeNTM.AcceptsLanguageWithinSpace {Q InputAlphabet Γ : Type*} {k : ℕ}
-    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
-    (M : MultitapeNTM Q InputAlphabet Γ k)
-    (A : ∀ n : ℕ, (Fin n → InputAlphabet) → Prop) (L : ℕ → ℕ) : Prop :=
-  (∀ n (input : Fin n → InputAlphabet), A n input → M.AcceptsOneSidedWithin input (L n)) ∧
-  (∀ n (input : Fin n → InputAlphabet), M.AcceptsOneSided input → A n input)
-
-/-- Deterministic language acceptance within storage `L(n)`. -/
-def MultitapeDTM.AcceptsLanguageWithinSpace {Q InputAlphabet Γ : Type*} {k : ℕ}
-    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
-    (D : MultitapeDTM Q InputAlphabet Γ k)
-    (A : ∀ n : ℕ, (Fin n → InputAlphabet) → Prop) (L : ℕ → ℕ) : Prop :=
-  D.toNTM.AcceptsLanguageWithinSpace A L
-
-/-- One step of a deterministic machine on one-sided tapes. -/
-def MultitapeDTM.oneSidedStep {Q InputAlphabet Γ : Type*} {k n : ℕ}
-    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
-    (D : MultitapeDTM Q InputAlphabet Γ k) (input : Fin n → InputAlphabet)
-    (cfg next : OneSidedTMConfig Q Γ k n) : Prop :=
-  D.toNTM.oneSidedStep input cfg next
-
 /-- Deterministic one-sided transitions have at most one successor. -/
 theorem MultitapeDTM.oneSidedStep_deterministic {Q InputAlphabet Γ : Type*} {k n : ℕ}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
@@ -691,32 +505,6 @@ theorem MultitapeDTM.oneSidedStep_deterministic {Q InputAlphabet Γ : Type*} {k 
   · funext tape
     have hSome : some (w₁ tape) = some (w₂ tape) := (hT₁ tape).symm.trans (hT₂ tape)
     exact Option.some.inj hSome
-
-/-- A 1-tape deterministic run witnesses exact space `S` if every visited head
-position is below `S`, some visited head position reaches `S - 1`, and the final
-configuration has no defined transition. -/
-def MultitapeDTM.HaltsScanningExactly {Q InputAlphabet Γ : Type*}
-    [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
-    (D : MultitapeDTM Q InputAlphabet Γ 1) {n : ℕ}
-    (input : Fin n → InputAlphabet) (S : ℕ) : Prop :=
-  ∃ final : OneSidedTMConfig Q Γ 1 n,
-    Relation.ReflTransGen
-      (fun a b => D.oneSidedStep input a b ∧ a.HeadsWithin S ∧ b.HeadsWithin S)
-      D.toNTM.oneSidedInitialConfig final ∧
-    D.transition final.state (readInput input final.inputHead) final.scannedWork = none ∧
-    (0 < S → ∃ mid : OneSidedTMConfig Q Γ 1 n,
-      Relation.ReflTransGen
-        (fun a b => D.oneSidedStep input a b ∧ a.HeadsWithin S ∧ b.HeadsWithin S)
-        D.toNTM.oneSidedInitialConfig mid ∧
-      (mid.workTapes 0).head + 1 = S)
-
-/-- A space function `L` is measurable over `InputAlphabet` when a single-work-tape
-deterministic Turing machine halts after scanning `L(n)` work squares on every
-input of length `n`. -/
-def IsMeasurable (InputAlphabet : Type*) [Fintype InputAlphabet] (L : ℕ → ℕ) : Prop :=
-  ∃ (Q Γ : Type) (_ : Fintype Q) (_ : Fintype Γ)
-    (D : MultitapeDTM Q InputAlphabet Γ 1),
-    ∀ (n : ℕ) (input : Fin n → InputAlphabet), D.HaltsScanningExactly input (L n)
 
 /-- The bounded configuration space is finite. -/
 theorem tmConfig_finite (Q Γ : Type*) (k n S : ℕ)
