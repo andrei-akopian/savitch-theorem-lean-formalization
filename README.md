@@ -1,5 +1,7 @@
 # Savitch's Theorem in Lean 4
 
+> [!WARNING] This Lemma is entirely LLM formalized. The author hasn't carefully reviewed the definitions involved and thus can't guarantee its correctness.
+
 > [!NOTE]
 > The proofs were machine-generated and kernel-checked in Lean 4 (`v4.35.0`, Mathlib `v4.35.0`).
 > All proofs compile with no `sorry`s and depend only on the standard Lean axioms
