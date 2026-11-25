@@ -60,7 +60,8 @@ theorem nonEmptyNTM_accepts :
     have hW0 : c0.HeadsWithin (n + 1) := fun _ => by simp [c0, MultitapeNTM.oneSidedInitialConfig]
     have hW1 : c1.HeadsWithin (n + 1) := fun _ => by simp [c1]
     have hW2 : c2.HeadsWithin (n + 1) := fun _ => by simp [c2]
-    refine ⟨c2, Relation.ReflTransGen.tail (Relation.ReflTransGen.single ⟨h01, hW0, hW1⟩) ⟨h12, hW1, hW2⟩, rfl⟩
+    refine ⟨c2, Relation.ReflTransGen.tail (Relation.ReflTransGen.single ⟨h01, hW0, hW1⟩)
+      ⟨h12, hW1, hW2⟩, rfl, hW2⟩
   · intro n input ⟨final, hRun, hAcc⟩
     by_contra hZero
     have hn : n = 0 := by omega

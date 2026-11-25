@@ -440,12 +440,12 @@ theorem MultitapeNTM.acceptsOneSided_of_acceptsOneSidedWithin
     (M : MultitapeNTM Q InputAlphabet Γ k) (input : Fin n → InputAlphabet)
     (capacity : ℕ) (hAccept : M.AcceptsOneSidedWithin input capacity) :
     M.AcceptsOneSided input := by
-  rcases hAccept with ⟨final, hRun, hAcc⟩
+  rcases hAccept with ⟨final, hRun, hAcc, _⟩
   have hRun' : Relation.ReflTransGen (M.oneSidedStep input) M.oneSidedInitialConfig final := by
     clear hAcc
     induction hRun with
     | refl => exact Relation.ReflTransGen.refl
-    | tail _ hStep ih => exact Relation.ReflTransGen.tail ih hStep.1
+    | tail _ hStep ih => exact Relation.ReflTransGen.tail (ih hStep.2.1) hStep.1
   exact ⟨final, hRun', hAcc⟩
 
 /-- Acceptance using only a work-tape segment of `capacity` cells. -/
@@ -466,15 +466,20 @@ theorem MultitapeNTM.acceptsOneSidedWithin_iff_acceptsWithinCapacity
     (capacity : ℕ) (hCapacity : 0 < capacity) :
     M.AcceptsOneSidedWithin input capacity ↔ M.AcceptsWithinCapacity input capacity hCapacity := by
   constructor
-  · rintro ⟨final, hRun, hAcc⟩
-    obtain ⟨hFinal, hBoundedRun⟩ :=
-      M.oneSidedRun_restricts_toBounded input capacity (fun _ => hCapacity) hRun
+  · rintro ⟨final, hRun, hAcc, hFinalHeads⟩
+    have hInitial : (M.oneSidedInitialConfig (n := n)).HeadsWithin capacity := by
+      cases hRun using Relation.ReflTransGen.head_induction_on with
+      | refl => exact hFinalHeads
+      | head hStep _ => exact hStep.2.1
+    obtain ⟨hFinalBounded, hBoundedRun⟩ :=
+      M.oneSidedRun_restricts_toBounded input capacity hInitial hRun
     rw [M.oneSidedInitialConfig_toBounded capacity hCapacity] at hBoundedRun
-    exact ⟨final.toBounded capacity hFinal, hBoundedRun, hAcc⟩
+    exact ⟨final.toBounded capacity hFinalBounded, hBoundedRun, hAcc⟩
   · rintro ⟨final, hRun, hAcc⟩
     have hLifted := M.boundedRun_lifts_within input capacity hRun
     rw [M.initialConfig_toOneSided capacity hCapacity] at hLifted
-    exact ⟨final.toOneSided M.blank, hLifted, hAcc⟩
+    exact ⟨final.toOneSided M.blank, hLifted, hAcc,
+      (final.toOneSided_fitsCapacity M.blank).headsWithin⟩
 
 /-- Deterministic one-sided transitions have at most one successor. -/
 theorem MultitapeDTM.oneSidedStep_deterministic {Q InputAlphabet Γ : Type*} {k n : ℕ}

@@ -507,11 +507,20 @@ theorem TMComponent.toDTM_acceptsWithin {Q InputAlphabet Γ : Type*} {k n : ℕ}
     (hReach : M.ReachesExit input bound (fun _ => ⟨fun _ => blank, 0⟩) ⟨0, by omega⟩
       true finalTapes finalInHead) :
     (M.toDTM blank).AcceptsOneSidedWithin input S := by
-  refine ⟨⟨.inr true, finalInHead, finalTapes⟩, ?_, rfl⟩
+  let final : OneSidedTMConfig (Q ⊕ Bool) Γ k n :=
+    ⟨.inr true, finalInHead, finalTapes⟩
+  refine ⟨final, ?_, rfl, ?_⟩
   have hInit : (M.toDTM blank).toNTM.oneSidedInitialConfig (n := n) =
       ⟨.inl M.start, ⟨0, by omega⟩, fun _ => ⟨fun _ => blank, 0⟩⟩ := rfl
   rw [hInit]
-  exact compRun_to_dtmRun_within M blank input bound S hBound hReach
+  · exact compRun_to_dtmRun_within M blank input bound S hBound hReach
+  · have hFinalWithin : final.HeadsWithin S := by
+      rcases Relation.ReflTransGen.cases_tail hReach with hEq | ⟨_, _, hLast⟩
+      · have hStateEq := congrArg OneSidedTMConfig.state hEq
+        cases hStateEq
+      · intro t
+        exact Nat.lt_of_lt_of_le (hLast.2.2 t) (hBound t)
+    exact hFinalWithin
 
 /-- If a `Bool`-exiting component reaches `false` from the initial configuration,
 its compiled `MultitapeDTM` never accepts `input`. -/

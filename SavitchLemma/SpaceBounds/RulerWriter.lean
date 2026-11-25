@@ -582,7 +582,7 @@ theorem rw_prefix {QD I : Type} [Fintype QD] [Fintype I] (D : MultitapeDTM QD I 
     (hB : S + 1 < B) (hHalt : D.HaltsScanningExactly input S) :
     ∃ (initTapes : Fin 5 → OneSidedTape SimSym) (inHead : Fin (n + 2)),
       PrefixPrepares (rwComp D) input S B initTapes inHead := by
-  obtain ⟨final, hRun, hNone, hMidEx⟩ := hHalt
+  obtain ⟨final, hRun, hNone, hMidEx, _hFinalWithin⟩ := hHalt
   obtain ⟨mid, hMidRun, hMidHead⟩ := hMidEx (by omega)
   have hU : Relator.RightUnique (DGood D input S) :=
     fun a b c h1 h2 => D.oneSidedStep_deterministic input h1.1 h2.1

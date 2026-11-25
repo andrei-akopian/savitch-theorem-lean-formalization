@@ -153,7 +153,8 @@ def MultitapeNTM.AcceptsOneSided {Q InputAlphabet Γ : Type*} {k n : ℕ}
     Relation.ReflTransGen (M.oneSidedStep input) M.oneSidedInitialConfig final ∧
     M.accepting final.state
 
-/-- Acceptance on one-sided work tapes with all heads staying below `capacity`. -/
+/-- Acceptance on one-sided work tapes with every configuration, including the
+initial and final ones, having all heads below `capacity`. -/
 def MultitapeNTM.AcceptsOneSidedWithin {Q InputAlphabet Γ : Type*} {k n : ℕ}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
     (M : MultitapeNTM Q InputAlphabet Γ k) (input : Fin n → InputAlphabet)
@@ -161,7 +162,7 @@ def MultitapeNTM.AcceptsOneSidedWithin {Q InputAlphabet Γ : Type*} {k n : ℕ}
   ∃ final : OneSidedTMConfig Q Γ k n,
     Relation.ReflTransGen
       (fun a b => M.oneSidedStep input a b ∧ a.HeadsWithin capacity ∧ b.HeadsWithin capacity)
-      M.oneSidedInitialConfig final ∧ M.accepting final.state
+      M.oneSidedInitialConfig final ∧ M.accepting final.state ∧ final.HeadsWithin capacity
 
 /-- A language `A` is accepted by `M` within storage `L(n)` when every input in `A`
 has an accepting run with all work-tape heads `< L(n)`, and `M` accepts no input
@@ -218,23 +219,24 @@ def MultitapeDTM.oneSidedStep {Q InputAlphabet Γ : Type*} {k n : ℕ}
     (cfg next : OneSidedTMConfig Q Γ k n) : Prop :=
   D.toNTM.oneSidedStep input cfg next
 
-/-- A 1-tape deterministic run witnesses exact space `S` if every visited head
-position is below `S`, some visited head position reaches `S - 1`, and the final
+/-- A 1-tape deterministic run witnesses exact space `S` if every configuration
+has its head below `S`, some visited head position reaches `S - 1`, and the final
 configuration has no defined transition. -/
 def MultitapeDTM.HaltsScanningExactly {Q InputAlphabet Γ : Type*}
     [Fintype Q] [Fintype InputAlphabet] [Fintype Γ]
     (D : MultitapeDTM Q InputAlphabet Γ 1) {n : ℕ}
     (input : Fin n → InputAlphabet) (S : ℕ) : Prop :=
   ∃ final : OneSidedTMConfig Q Γ 1 n,
-    Relation.ReflTransGen
-      (fun a b => D.oneSidedStep input a b ∧ a.HeadsWithin S ∧ b.HeadsWithin S)
-      D.toNTM.oneSidedInitialConfig final ∧
+      Relation.ReflTransGen
+        (fun a b => D.oneSidedStep input a b ∧ a.HeadsWithin S ∧ b.HeadsWithin S)
+        D.toNTM.oneSidedInitialConfig final ∧
     D.transition final.state (readInput input final.inputHead) final.scannedWork = none ∧
     (0 < S → ∃ mid : OneSidedTMConfig Q Γ 1 n,
       Relation.ReflTransGen
         (fun a b => D.oneSidedStep input a b ∧ a.HeadsWithin S ∧ b.HeadsWithin S)
         D.toNTM.oneSidedInitialConfig mid ∧
-      (mid.workTapes 0).head + 1 = S)
+      (mid.workTapes 0).head + 1 = S) ∧
+    final.HeadsWithin S
 
 /-- A space function `L` is measurable over `InputAlphabet` when a single-work-tape
 deterministic Turing machine halts after scanning `L(n)` work squares on every

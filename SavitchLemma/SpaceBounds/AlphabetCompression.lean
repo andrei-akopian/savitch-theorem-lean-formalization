@@ -473,7 +473,7 @@ theorem rwg_prefix (D : MultitapeDTM QD I Γ 1) {n : ℕ}
     (hHalt : D.HaltsScanningExactly input S) :
     ∃ (initTapes : Fin 5 → OneSidedTape SimSym) (inHead : Fin (n + 2)),
       PrefixPrepares (rwCompGen D) input S B initTapes inHead := by
-  obtain ⟨final, hRun, hNone, hReach⟩ := hHalt
+  obtain ⟨final, hRun, hNone, hReach, _hFinalWithin⟩ := hHalt
   obtain ⟨mid, hMid, hMidHead⟩ := hReach hS
   have hw := card_pos_of_blank D
   have hSB : Fintype.card Γ * S + 1 < B := by nlinarith
